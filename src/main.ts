@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import fastifyHelmet from '@fastify/helmet';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import {
   FastifyAdapter,
   NestFastifyApplication,
@@ -10,11 +11,10 @@ import { fastifyCookie } from '@fastify/cookie';
 
 async function bootstrap() {
   const fastifyAdapter = new FastifyAdapter({ logger: true });
-  fastifyAdapter.register(fastifyHelmet);
-  fastifyAdapter.register(fastifyCompress);
-  fastifyAdapter.register(fastifyCookie, {
-    secret: 'anco',
-  });
+  // fastifyAdapter.register(fastifyCompress);
+  // fastifyAdapter.register(fastifyCookie, {
+  //   secret: 'anco',
+  // });
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     fastifyAdapter,
@@ -28,6 +28,38 @@ async function bootstrap() {
       },
     },
   );
-  await app.listen(5000);
+  app.setGlobalPrefix('v1');
+  // register is a wrapper for native fastify.register()
+  await app.register(fastifyHelmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: [`'self'`],
+        styleSrc: [
+          `'self'`,
+          `'unsafe-inline'`,
+          'cdn.jsdelivr.net',
+          'fonts.googleapis.com',
+        ],
+        fontSrc: [`'self'`, 'fonts.gstatic.com'],
+        imgSrc: [`'self'`, 'data:', 'cdn.jsdelivr.net'],
+        scriptSrc: [`'self'`, `https: 'unsafe-inline'`, `cdn.jsdelivr.net`],
+      },
+    },
+  });
+  await app.register(fastifyCompress);
+
+  await app.register(fastifyCookie, {
+    secret: 'anco',
+  });
+
+  const config = new DocumentBuilder()
+    .setTitle('Digital Art Mall')
+    .setDescription('The API description')
+    .setVersion('1.0')
+    .addTag('WIP')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
+  await app.listen(5001);
 }
 bootstrap();
