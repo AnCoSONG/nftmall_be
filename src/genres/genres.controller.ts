@@ -1,8 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { GenresService } from './genres.service';
 import { CreateGenreDto } from './dto/create-genre.dto';
 import { UpdateGenreDto } from './dto/update-genre.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('藏品类别')
 @Controller('genres')
 export class GenresController {
   constructor(private readonly genresService: GenresService) {}
@@ -15,6 +26,11 @@ export class GenresController {
   @Get()
   findAll() {
     return this.genresService.findAll();
+  }
+
+  @Get('/list')
+  list(@Query('page') page: number, @Query('limit') limit: number) {
+    return this.genresService.list(page, limit);
   }
 
   @Get(':id')

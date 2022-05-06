@@ -1,26 +1,85 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { requestKeyErrorException } from '../exceptions';
+import { Repository } from 'typeorm';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
+import { Tag } from './entities/tag.entity';
 
 @Injectable()
 export class TagsService {
-  create(createTagDto: CreateTagDto) {
-    return 'This action adds a new tag';
+  constructor(@InjectRepository(Tag) private tagRepository: Repository<Tag>) {}
+
+  async checkExists(name: string) {
+    const tag = await this.tagRepository.findOne({ name });
+    if (tag) {
+      throw new requestKeyErrorException(
+        `Tag with name ${name} already exists`,
+      );
+    }
   }
 
-  findAll() {
-    return `This action returns all tags`;
+  async create(createTagDto: CreateTagDto) {
+    // 创建前先检查是否存在
+    await this.checkExists(createTagDto.name);
+    const newTag = this.tagRepository.create(createTagDto);
+    return await this.tagRepository.save(newTag);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} tag`;
+  async findAll() {
+    return await this.tagRepository.find();
   }
 
-  update(id: number, updateTagDto: UpdateTagDto) {
-    return `This action updates a #${id} tag`;
+  async list(page: number, limit: number) {
+    if (page <= 0 || limit <= 0) {
+      throw new requestKeyErrorException(
+        'page and limit must be greater than 0',
+      );
+    }
+    return await this.tagRepository.find({
+      skip: (page - 1) * limit,
+      take: limit,
+    });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} tag`;
+  async findOne(id: number) {
+    const tag = await this.tagRepository.findOne(id);
+    if (!tag) {
+      throw new NotFoundException(`Tag with id ${id} not found`);
+    }
+    return tag;
+  }
+
+  async findOneByName(name: string) {
+    const tag = await this.tagRepository.findOne({ name });
+    if (!tag) {
+      throw new NotFoundException(`Tag with name ${name} not found`);
+    }
+    return tag;
+  }
+
+  async update(id: number, updateTagDto: UpdateTagDto) {
+    // 拿到ID对应的tag
+    const tag = await this.tagRepository.findOne(id);
+    if (!tag) {
+      throw new NotFoundException(`Tag with id ${id} not found`);
+    }
+    if (updateTagDto.name !== tag.name) {
+      // 如果和自己之前的名称不一样，则检查是否存在其他重名可能
+      await this.checkExists(updateTagDto.name);
+    }
+    // 检查之后进行更新
+    for (const key in updateTagDto) {
+      if (tag.hasOwnProperty(key)) {
+        tag[key] = updateTagDto[key];
+      } else {
+        throw new requestKeyErrorException(`Key ${key} not supported`);
+      }
+    }
+    return await this.tagRepository.save(tag);
+  }
+
+  async remove(id: number) {
+    return await this.tagRepository.softRemove(await this.findOne(id));
   }
 }

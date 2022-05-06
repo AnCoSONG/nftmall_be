@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { CreateCollectorDto } from './dto/create-collector.dto';
 import { UpdateCollectorDto } from './dto/update-collector.dto';
 import { Collector } from './entities/collector.entity';
-import * as dayjs from 'dayjs'
+import * as dayjs from 'dayjs';
 
 @Injectable()
 export class CollectorsService {

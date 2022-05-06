@@ -1,16 +1,14 @@
-import { DateAndVersion } from 'src/common/enities';
-import { Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { DisplayMode } from '../../common/const';
+import { DateAndVersion } from '../../common/enities';
 
-enum DisplayMode {
-  LIGHT = 'light',
-  DARK = 'dark',
-}
+@Entity()
 export class Tag {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  name: number;
+  @Column({ length: 10 })
+  name: string;
 
   @Column({
     type: 'enum',
@@ -20,5 +18,5 @@ export class Tag {
   mode: DisplayMode;
 
   @Column(() => DateAndVersion)
-  tag: DateAndVersion;
+  meta: DateAndVersion;
 }

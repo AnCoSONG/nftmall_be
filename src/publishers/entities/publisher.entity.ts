@@ -1,6 +1,7 @@
-import { DateAndVersion } from 'src/common/enities';
-import { Product } from 'src/products/entities/product.entity';
+
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { DateAndVersion } from '../../common/enities';
+import { Product } from '../../products/entities/product.entity';
 
 @Entity()
 export class Publisher {
@@ -16,5 +17,5 @@ export class Publisher {
   works: Product[];
 
   @Column(() => DateAndVersion)
-  pub: DateAndVersion;
+  meta: DateAndVersion;
 }

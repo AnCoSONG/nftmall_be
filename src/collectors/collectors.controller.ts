@@ -7,10 +7,12 @@ import {
   Param,
   Delete,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { CollectorsService } from './collectors.service';
 import { CreateCollectorDto } from './dto/create-collector.dto';
 import { UpdateCollectorDto } from './dto/update-collector.dto';
 
+@ApiTags('藏家')
 @Controller('collectors')
 export class CollectorsController {
   constructor(private readonly collectorsService: CollectorsService) {}

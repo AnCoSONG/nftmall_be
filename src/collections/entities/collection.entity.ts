@@ -1,15 +1,15 @@
 import { DateAndVersion } from 'src/common/enities';
 import { Column, PrimaryGeneratedColumn } from 'typeorm';
 
-export class Banner {
+export class Collection {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', length: 255 })
-  imgsrc: string;
+  @Column()
+  collector_id: number;
 
-  @Column({ type: 'varchar', length: 255 })
-  link: string;
+  @Column()
+  product_item_id: number;
 
   @Column(() => DateAndVersion)
   meta: DateAndVersion;

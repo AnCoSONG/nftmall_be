@@ -1,23 +1,19 @@
-import { DateAndVersion } from 'src/common/enities';
-import { Genre } from 'src/genres/entities/genre.entity';
-import { Publisher } from 'src/publishers/entities/publisher.entity';
-import { Tag } from 'src/tags/entities/tag.entity';
 import {
   Column,
   Entity,
   JoinTable,
   ManyToMany,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { SupportType } from '../../common/const';
+import { DateAndVersion } from '../../common/enities';
+import { Genre } from '../../genres/entities/genre.entity';
+import { ProductItem } from '../../product-items/entities/product-item.entity';
+import { Publisher } from '../../publishers/entities/publisher.entity';
+import { Tag } from '../../tags/entities/tag.entity';
 
-export enum SupportType {
-  IMAGE = 'image',
-  VIDEO = 'video',
-  AUDIO = 'audio',
-  D3 = '3D',
-  HYBRID = 'hybrid',
-}
 @Entity()
 export class Product {
   @PrimaryGeneratedColumn()
@@ -36,6 +32,11 @@ export class Product {
   })
   type: SupportType;
 
+  @OneToMany(() => ProductItem, (item) => item.product, {
+    cascade: true, // 在oneToMany开启级联，添加Product时会自动向ProductItem表里添加记录
+  })
+  items: ProductItem[];
+
   @ManyToMany(() => Genre, {
     cascade: true, // 创建商品会自动创建类别
   })
@@ -47,6 +48,9 @@ export class Product {
   })
   @JoinTable()
   tags: Tag[]; // 藏品标签，可能有多个
+
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  price: number;
 
   @ManyToOne(() => Publisher, (publisher) => publisher.works, {
     // https://stackoverflow.com/questions/55098023/typeorm-cascade-option-cascade-ondelete-onupdate
@@ -65,5 +69,5 @@ export class Product {
   limit: number; // 限购数量
 
   @Column(() => DateAndVersion)
-  prod: DateAndVersion; // 创建，更新和版本封装在一个对象中
+  meta: DateAndVersion; // 创建，更新和版本封装在一个对象中
 }

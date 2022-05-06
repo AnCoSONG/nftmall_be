@@ -13,6 +13,7 @@ import { AdminsModule } from './admins/admins.module';
 import { PublishersModule } from './publishers/publishers.module';
 import { GenresModule } from './genres/genres.module';
 import { TagsModule } from './tags/tags.module';
+import { CollectionsModule } from './collections/collections.module';
 import config from './config';
 
 @Module({
@@ -27,7 +28,7 @@ import config from './config';
       useFactory: (configService: ConfigService) => ({
         type: 'mysql',
         host: configService.get('database.host'),
-        port: +configService.get<number>('PORT'),
+        port: +configService.get<number>('database.port'),
         username: configService.get('database.username'),
         password: configService.get('database.password'),
         database: configService.get('database.database'),
@@ -46,6 +47,7 @@ import config from './config';
     PublishersModule,
     GenresModule,
     TagsModule,
+    CollectionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

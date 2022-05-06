@@ -31,5 +31,5 @@ export class Collector {
   credit: number;
 
   @Column(() => DateAndVersion)
-  col: DateAndVersion;
+  meta: DateAndVersion;
 }
