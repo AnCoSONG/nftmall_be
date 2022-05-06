@@ -24,7 +24,7 @@ import config from './config';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         type: 'mysql',
-        host: configService.get('HOST'),
+        host: configService.get('database.host'),
         port: +configService.get<number>('PORT'),
         username: configService.get('database.username'),
         password: configService.get('database.password'),
