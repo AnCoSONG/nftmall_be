@@ -36,12 +36,12 @@ export class Collector {
   @Column({ type: 'float', default: 0.0, precision: 10, scale: 2 })
   credit: number;
 
-  @CreateDateColumn()
-  created_date: Date;
-
-  @UpdateDateColumn()
-  updated_date: Date;
-
   @VersionColumn()
   version: number;
+
+  @CreateDateColumn({ type: 'timestamp' })
+  create_date: Date;
+
+  @UpdateDateColumn({ type: 'timestamp' })
+  update_date: Date;
 }

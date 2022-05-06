@@ -1,26 +1,36 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateCollectorDto } from './dto/create-collector.dto';
 import { UpdateCollectorDto } from './dto/update-collector.dto';
+import { Collector } from './entities/collector.entity';
+import * as dayjs from 'dayjs'
 
 @Injectable()
 export class CollectorsService {
-  create(createCollectorDto: CreateCollectorDto) {
-    return 'This action adds a new collector';
+  constructor(
+    @InjectRepository(Collector)
+    private collectorRepository: Repository<Collector>,
+  ) {}
+
+  async create(createCollectorDto: CreateCollectorDto) {
+    const collector = this.collectorRepository.create(createCollectorDto);
+    return await this.collectorRepository.save(collector);
   }
 
-  findAll() {
-    return `This action returns all collectors`;
+  async findAll() {
+    return await this.collectorRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} collector`;
+  async findOne(id: number) {
+    return await this.collectorRepository.findOne(id);
   }
 
-  update(id: number, updateCollectorDto: UpdateCollectorDto) {
-    return `This action updates a #${id} collector`;
+  async update(id: number, updateCollectorDto: UpdateCollectorDto) {
+    return await this.collectorRepository.update(id, updateCollectorDto);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} collector`;
+  async remove(id: number) {
+    return await this.collectorRepository.delete(id);
   }
 }
