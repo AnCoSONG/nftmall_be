@@ -12,6 +12,7 @@ import { BannersModule } from './banners/banners.module';
 import { AdminsModule } from './admins/admins.module';
 import { PublishersModule } from './publishers/publishers.module';
 import { GenresModule } from './genres/genres.module';
+import { TagsModule } from './tags/tags.module';
 import config from './config';
 
 @Module({
@@ -44,6 +45,7 @@ import config from './config';
     AdminsModule,
     PublishersModule,
     GenresModule,
+    TagsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

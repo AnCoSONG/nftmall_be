@@ -1,12 +1,5 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
+import { DateAndVersion } from 'src/common/enities';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class Collector {
@@ -37,12 +30,6 @@ export class Collector {
   @Column({ type: 'float', default: 0.0, precision: 10, scale: 2 })
   credit: number;
 
-  @VersionColumn()
-  version: number;
-
-  @CreateDateColumn({ type: 'timestamp' })
-  create_date: Date;
-
-  @UpdateDateColumn({ type: 'timestamp' })
-  update_date: Date;
+  @Column(() => DateAndVersion)
+  col: DateAndVersion;
 }
