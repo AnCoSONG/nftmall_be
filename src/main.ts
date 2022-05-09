@@ -8,6 +8,8 @@ import {
 } from '@nestjs/platform-fastify';
 import fastifyCompress from '@fastify/compress';
 import { fastifyCookie } from '@fastify/cookie';
+// import fastifyCookie from 'fastify-cookie';
+import FastifyCsrf from 'fastify-csrf';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
 
@@ -53,6 +55,7 @@ async function bootstrap() {
   await app.register(fastifyCookie, {
     secret: 'anco',
   });
+  app.register(FastifyCsrf, { cookieOpts: { signed: true } });
   app.useGlobalInterceptors(new TransformInterceptor());
   app.useGlobalFilters(new HttpExceptionFilter());
 
@@ -60,6 +63,7 @@ async function bootstrap() {
     .setTitle('Digital Art Mall')
     .setDescription('The API description')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);

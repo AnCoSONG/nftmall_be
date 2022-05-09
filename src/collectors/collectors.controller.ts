@@ -6,11 +6,19 @@ import {
   Patch,
   Param,
   Delete,
+  UsePipes,
+  ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { JoiValidationPipe } from '../pipes/joi-validation.pipe';
 import { CollectorsService } from './collectors.service';
 import { CreateCollectorDto } from './dto/create-collector.dto';
 import { UpdateCollectorDto } from './dto/update-collector.dto';
+import {
+  CreateCollectorSchema,
+  UpdateCollectorSchema,
+} from './schemas/collector.schema';
 
 @ApiTags('藏家')
 @Controller('collectors')
@@ -18,6 +26,7 @@ export class CollectorsController {
   constructor(private readonly collectorsService: CollectorsService) {}
 
   @Post()
+  @UsePipes(new JoiValidationPipe(CreateCollectorSchema))
   create(@Body() createCollectorDto: CreateCollectorDto) {
     return this.collectorsService.create(createCollectorDto);
   }
@@ -27,14 +36,20 @@ export class CollectorsController {
     return this.collectorsService.findAll();
   }
 
+  @Get('/by')
+  findByPhone(@Query('phone') phone: string) {
+    return this.collectorsService.findByPhone(phone);
+  }
+
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseIntPipe) id: string) {
     return this.collectorsService.findOne(+id);
   }
 
   @Patch(':id')
+  @UsePipes(new JoiValidationPipe(UpdateCollectorSchema))
   update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: string,
     @Body() updateCollectorDto: UpdateCollectorDto,
   ) {
     return this.collectorsService.update(+id, updateCollectorDto);

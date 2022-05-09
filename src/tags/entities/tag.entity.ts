@@ -7,7 +7,7 @@ export class Tag {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ length: 10 })
+  @Column({ length: 20 })
   name: string;
 
   @Column({

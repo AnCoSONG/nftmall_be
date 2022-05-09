@@ -1,6 +1,7 @@
 import { DateAndVersion } from 'src/common/enities';
-import { Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
+@Entity()
 export class Notice {
   @PrimaryGeneratedColumn()
   id: number;

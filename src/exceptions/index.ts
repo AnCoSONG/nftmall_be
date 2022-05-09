@@ -6,3 +6,15 @@ export class requestKeyErrorException extends HttpException {
     super(message, HttpStatus.BAD_REQUEST);
   }
 }
+
+export class SqlException extends HttpException {
+  constructor(message: string) {
+    super(message, HttpStatus.BAD_REQUEST);
+  }
+}
+
+export class RedisException extends HttpException {
+  constructor(message: string) {
+    super(message, HttpStatus.BAD_REQUEST);
+  }
+}

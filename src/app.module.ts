@@ -14,11 +14,15 @@ import { PublishersModule } from './publishers/publishers.module';
 import { GenresModule } from './genres/genres.module';
 import { TagsModule } from './tags/tags.module';
 import { CollectionsModule } from './collections/collections.module';
+import { BullModule } from '@nestjs/bull';
 import config from './config';
+import { RedisModule } from '@liaoliaots/nestjs-redis';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
+      // .env 也不应该上传，应该根据Github Action动态生成
       envFilePath: ['.env.local', '.env'],
       isGlobal: true,
       load: [config],
@@ -37,6 +41,32 @@ import config from './config';
       }),
       inject: [ConfigService],
     }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        redis: {
+          host: configService.get('redis.host'),
+          port: +configService.get<number>('redis.port'),
+          password: configService.get('redis.password'),
+          db: 1, // for queue
+        },
+      }),
+      inject: [ConfigService],
+    }),
+    RedisModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        // readyLog: true,
+        errorLog: true,
+        config: {
+          host: configService.get('redis.host'),
+          port: +configService.get<number>('redis.port'),
+          password: configService.get('redis.password'),
+          db: 0, // for cache
+        },
+      }),
+    }),
     CollectorsModule,
     ProductsModule,
     ProductItemsModule,
@@ -48,6 +78,7 @@ import config from './config';
     GenresModule,
     TagsModule,
     CollectionsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

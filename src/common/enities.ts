@@ -6,7 +6,7 @@ import {
 } from 'typeorm';
 
 export class DateAndVersion {
-  @VersionColumn()
+  @VersionColumn({ type: 'smallint', unsigned: true })
   version: number;
 
   @CreateDateColumn({ type: 'timestamp' })

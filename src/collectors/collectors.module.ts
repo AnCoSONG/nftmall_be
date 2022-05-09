@@ -8,5 +8,6 @@ import { Collector } from './entities/collector.entity';
   imports: [TypeOrmModule.forFeature([Collector])],
   controllers: [CollectorsController],
   providers: [CollectorsService],
+  exports: [CollectorsService],
 })
 export class CollectorsModule {}

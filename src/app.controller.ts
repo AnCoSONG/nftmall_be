@@ -10,4 +10,9 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+  @Get('/test-redis')
+  testRedis() {
+    return this.appService.testRedis();
+  }
 }

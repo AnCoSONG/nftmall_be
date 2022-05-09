@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { sqlExceptionCatcher } from '../common/utils';
 import { requestKeyErrorException } from '../exceptions';
 import { CreateGenreDto } from './dto/create-genre.dto';
 import { UpdateGenreDto } from './dto/update-genre.dto';
@@ -14,11 +15,11 @@ export class GenresService {
   ) {}
   async create(createGenreDto: CreateGenreDto) {
     const genre = this.genreRepository.create(createGenreDto);
-    return await this.genreRepository.save(genre);
+    return await sqlExceptionCatcher(this.genreRepository.save(genre));
   }
 
   async findAll() {
-    return await this.genreRepository.find();
+    return await sqlExceptionCatcher(this.genreRepository.find());
   }
 
   async list(page: number, limit: number) {
@@ -27,10 +28,12 @@ export class GenresService {
         'page and limit must be greater than 0',
       );
     }
-    return await this.genreRepository.find({
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    return await sqlExceptionCatcher(
+      this.genreRepository.find({
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    );
   }
 
   async findOne(id: number) {
@@ -42,21 +45,14 @@ export class GenresService {
   }
 
   async update(id: number, updateGenreDto: UpdateGenreDto) {
-    const genre = await this.genreRepository.findOne(id);
-    if (!genre) {
-      throw new NotFoundException(`Genre with id ${id} not found`);
-    }
-    for (const key in updateGenreDto) {
-      if (genre.hasOwnProperty(key)) {
-        genre[key] = updateGenreDto[key];
-      } else {
-        throw new requestKeyErrorException(`Key ${key} not supported`);
-      }
-    }
-    return await this.genreRepository.save(genre);
+    const genre = await this.findOne(id);
+    const merged = this.genreRepository.merge(genre, updateGenreDto);
+    return await sqlExceptionCatcher(this.genreRepository.save(merged));
   }
 
   async remove(id: number) {
-    return await this.genreRepository.softRemove(await this.findOne(id));
+    return await sqlExceptionCatcher(
+      this.genreRepository.softRemove(await this.findOne(id)),
+    );
   }
 }

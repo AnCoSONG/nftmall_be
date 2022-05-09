@@ -9,10 +9,10 @@ export class Collector {
   @Column({ type: 'varchar', length: 10 })
   username: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  bsn_address: string;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  bsn_address: string | null; // bsn_address is going to be set after create, this should be async
 
-  @Column({ type: 'char', length: 11 })
+  @Column({ type: 'char', length: 11, unique: true })
   phone: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })

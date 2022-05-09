@@ -7,11 +7,15 @@ import {
   Param,
   Delete,
   Query,
+  UsePipes,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { GenresService } from './genres.service';
 import { CreateGenreDto } from './dto/create-genre.dto';
 import { UpdateGenreDto } from './dto/update-genre.dto';
 import { ApiTags } from '@nestjs/swagger';
+import { JoiValidationPipe } from '../pipes/joi-validation.pipe';
+import { CreateGenreSchema, UpdateGenreSchema } from './schemas/genres.schema';
 
 @ApiTags('藏品类别')
 @Controller('genres')
@@ -19,6 +23,7 @@ export class GenresController {
   constructor(private readonly genresService: GenresService) {}
 
   @Post()
+  @UsePipes(new JoiValidationPipe(CreateGenreSchema))
   create(@Body() createGenreDto: CreateGenreDto) {
     return this.genresService.create(createGenreDto);
   }
@@ -29,22 +34,29 @@ export class GenresController {
   }
 
   @Get('/list')
-  list(@Query('page') page: number, @Query('limit') limit: number) {
+  list(
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
+  ) {
     return this.genresService.list(page, limit);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseIntPipe) id: string) {
     return this.genresService.findOne(+id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateGenreDto: UpdateGenreDto) {
+  @UsePipes(new JoiValidationPipe(UpdateGenreSchema))
+  update(
+    @Param('id', ParseIntPipe) id: string,
+    @Body() updateGenreDto: UpdateGenreDto,
+  ) {
     return this.genresService.update(+id, updateGenreDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: string) {
     return this.genresService.remove(+id);
   }
 }

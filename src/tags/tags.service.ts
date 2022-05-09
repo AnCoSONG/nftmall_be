@@ -5,13 +5,14 @@ import { Repository } from 'typeorm';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
 import { Tag } from './entities/tag.entity';
+import { sqlExceptionCatcher } from '../common/utils';
 
 @Injectable()
 export class TagsService {
   constructor(@InjectRepository(Tag) private tagRepository: Repository<Tag>) {}
 
   async checkExists(name: string) {
-    const tag = await this.tagRepository.findOne({ name });
+    const tag = await sqlExceptionCatcher(this.tagRepository.findOne({ name }));
     if (tag) {
       throw new requestKeyErrorException(
         `Tag with name ${name} already exists`,
@@ -23,11 +24,11 @@ export class TagsService {
     // 创建前先检查是否存在
     await this.checkExists(createTagDto.name);
     const newTag = this.tagRepository.create(createTagDto);
-    return await this.tagRepository.save(newTag);
+    return await sqlExceptionCatcher(this.tagRepository.save(newTag));
   }
 
   async findAll() {
-    return await this.tagRepository.find();
+    return await sqlExceptionCatcher(this.tagRepository.find());
   }
 
   async list(page: number, limit: number) {
@@ -36,14 +37,16 @@ export class TagsService {
         'page and limit must be greater than 0',
       );
     }
-    return await this.tagRepository.find({
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    return await sqlExceptionCatcher(
+      this.tagRepository.find({
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    );
   }
 
   async findOne(id: number) {
-    const tag = await this.tagRepository.findOne(id);
+    const tag = await sqlExceptionCatcher(this.tagRepository.findOne(id));
     if (!tag) {
       throw new NotFoundException(`Tag with id ${id} not found`);
     }
@@ -51,7 +54,7 @@ export class TagsService {
   }
 
   async findOneByName(name: string) {
-    const tag = await this.tagRepository.findOne({ name });
+    const tag = await sqlExceptionCatcher(this.tagRepository.findOne({ name }));
     if (!tag) {
       throw new NotFoundException(`Tag with name ${name} not found`);
     }
@@ -60,7 +63,7 @@ export class TagsService {
 
   async update(id: number, updateTagDto: UpdateTagDto) {
     // 拿到ID对应的tag
-    const tag = await this.tagRepository.findOne(id);
+    const tag = await sqlExceptionCatcher(this.tagRepository.findOne(id));
     if (!tag) {
       throw new NotFoundException(`Tag with id ${id} not found`);
     }
@@ -68,18 +71,19 @@ export class TagsService {
       // 如果和自己之前的名称不一样，则检查是否存在其他重名可能
       await this.checkExists(updateTagDto.name);
     }
-    // 检查之后进行更新
-    for (const key in updateTagDto) {
-      if (tag.hasOwnProperty(key)) {
-        tag[key] = updateTagDto[key];
-      } else {
-        throw new requestKeyErrorException(`Key ${key} not supported`);
-      }
-    }
-    return await this.tagRepository.save(tag);
+    // 使用Merge更简洁
+    const merged = this.tagRepository.merge(tag, updateTagDto);
+    return await sqlExceptionCatcher(this.tagRepository.save(merged));
+    // try {
+    //   return await this.tagRepository.save(tag);
+    // } catch (e) {
+    //   throw new BadRequestException(e.message);
+    // }
   }
 
   async remove(id: number) {
-    return await this.tagRepository.softRemove(await this.findOne(id));
+    return await sqlExceptionCatcher(
+      this.tagRepository.softRemove(await this.findOne(id)),
+    );
   }
 }

@@ -1,4 +1,3 @@
-
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { DateAndVersion } from '../../common/enities';
 import { Product } from '../../products/entities/product.entity';
@@ -8,7 +7,7 @@ export class Publisher {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: 'varchar', length: 50 })
   name: string;
 
   @OneToMany(() => Product, (product) => product.publisher, {
