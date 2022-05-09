@@ -11,5 +11,5 @@ export class CreateBannerDto {
     description: '点击后前往哪个页面',
     example: null,
   })
-  link: string;
+  link?: string;
 }

@@ -18,8 +18,12 @@ export class GenresService {
     return await sqlExceptionCatcher(this.genreRepository.save(genre));
   }
 
-  async findAll() {
-    return await sqlExceptionCatcher(this.genreRepository.find());
+  async findAll(withProducts: boolean) {
+    return await sqlExceptionCatcher(
+      this.genreRepository.find(
+        withProducts ? { relations: ['products'] } : {},
+      ),
+    );
   }
 
   async list(page: number, limit: number) {
@@ -30,6 +34,7 @@ export class GenresService {
     }
     return await sqlExceptionCatcher(
       this.genreRepository.find({
+        relations: ['products'],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -37,7 +42,11 @@ export class GenresService {
   }
 
   async findOne(id: number) {
-    const genre = await this.genreRepository.findOne(id);
+    const genre = await sqlExceptionCatcher(
+      this.genreRepository.findOne(id, {
+        relations: ['products'],
+      }),
+    );
     if (!genre) {
       throw new NotFoundException(`Genre with id ${id} not found`);
     }
@@ -52,7 +61,7 @@ export class GenresService {
 
   async remove(id: number) {
     return await sqlExceptionCatcher(
-      this.genreRepository.softRemove(await this.findOne(id)),
+      this.genreRepository.remove(await this.findOne(id)),
     );
   }
 }

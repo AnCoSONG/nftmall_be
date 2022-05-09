@@ -9,6 +9,7 @@ import {
   Query,
   UsePipes,
   ParseIntPipe,
+  ParseBoolPipe,
 } from '@nestjs/common';
 import { GenresService } from './genres.service';
 import { CreateGenreDto } from './dto/create-genre.dto';
@@ -29,8 +30,8 @@ export class GenresController {
   }
 
   @Get()
-  findAll() {
-    return this.genresService.findAll();
+  findAll(@Query('with_products', ParseBoolPipe) withProducts: boolean) {
+    return this.genresService.findAll(withProducts);
   }
 
   @Get('/list')

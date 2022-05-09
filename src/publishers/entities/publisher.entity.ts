@@ -1,5 +1,13 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { DateAndVersion } from '../../common/enities';
+import {
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
+} from 'typeorm';
 import { Product } from '../../products/entities/product.entity';
 
 @Entity()
@@ -7,14 +15,26 @@ export class Publisher {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', length: 50 })
+  @Column({ type: 'varchar', length: 50, unique: true })
   name: string;
+
+  @Column({ type: 'varchar', length: 255 })
+  avatar: string;
+
+  @VersionColumn({ type: 'smallint', unsigned: true })
+  version: number;
+
+  @CreateDateColumn({ type: 'timestamp' })
+  create_date: Date;
+
+  @UpdateDateColumn({ type: 'timestamp' })
+  update_date: Date;
+
+  @DeleteDateColumn({ type: 'timestamp' })
+  delete_date: Date;
 
   @OneToMany(() => Product, (product) => product.publisher, {
     cascade: true, // 在oneToMany开启级联，添加Product时会自动向Product表里添加记录
   })
   works: Product[];
-
-  @Column(() => DateAndVersion)
-  meta: DateAndVersion;
 }

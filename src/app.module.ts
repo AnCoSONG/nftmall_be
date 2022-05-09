@@ -12,7 +12,6 @@ import { BannersModule } from './banners/banners.module';
 import { AdminsModule } from './admins/admins.module';
 import { PublishersModule } from './publishers/publishers.module';
 import { GenresModule } from './genres/genres.module';
-import { TagsModule } from './tags/tags.module';
 import { CollectionsModule } from './collections/collections.module';
 import { BullModule } from '@nestjs/bull';
 import config from './config';
@@ -76,7 +75,6 @@ import { AuthModule } from './auth/auth.module';
     AdminsModule,
     PublishersModule,
     GenresModule,
-    TagsModule,
     CollectionsModule,
     AuthModule,
   ],

@@ -26,3 +26,8 @@ export enum AuthError {
   INVALID = 3,
   UNKNOWN = 4,
 }
+
+export type Tag = {
+  name: string;
+  mode?: DisplayMode;
+};

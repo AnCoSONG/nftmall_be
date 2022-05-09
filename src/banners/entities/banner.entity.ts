@@ -10,7 +10,7 @@ export class Banner {
   src: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  link: string;
+  link?: string;
 
   @Column(() => DateAndVersion)
   meta: DateAndVersion;
