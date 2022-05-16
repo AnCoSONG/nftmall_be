@@ -12,4 +12,7 @@ export class CreateCollectorDto {
     example: 'https://avatars.dicebear.com/api/pixel-art/random.svg',
   })
   avatar: string;
+
+  @ApiProperty({ description: '区块链地址', example: null })
+  bsn_address?: string;
 }

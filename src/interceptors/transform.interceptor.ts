@@ -13,6 +13,7 @@ export class TransformInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest<FastifyRequest>();
     const res = context.switchToHttp().getResponse<FastifyReply>();
+    console.log('req.user', req['user']);
     // console.log(req.raw.url, req.context.config.url, req.url);
     // change post response with 200, so that all success response codes are the same.
     if (req.method === 'POST') res.statusCode = HttpStatus.OK;
@@ -20,7 +21,7 @@ export class TransformInterceptor implements NestInterceptor {
       map((data) => {
         // set auth info in cookie for safty
         if (req['user'] && req['user'].data) {
-          res.log.info('updating tokens');
+          res.log.info('updating tokens', req['user']);
           res.cookie('tt', req['user'].data.refresh_token, {
             maxAge: 1000 * 60 * 60 * 24 * 15,
             httpOnly: true,
@@ -28,7 +29,7 @@ export class TransformInterceptor implements NestInterceptor {
             path: '/',
           });
           res.cookie('xc', req['user'].data.access_token, {
-            maxAge: 1000 * 60 * 60 * 24 * 2, // 2 day ...
+            maxAge: 1000 * 60 * 60 * 24 * 2, // 2 day ... larger than redis expire time
             httpOnly: true,
             secure: true,
             path: '/',
@@ -38,8 +39,8 @@ export class TransformInterceptor implements NestInterceptor {
           auth: req['user']?.code, //! can be null!
           data,
           code: res.statusCode,
-          rawCode: res.statusCode,
-          message: `request ${req.url} success`,
+          statusCode: res.statusCode,
+          message: data.message ?? `request ${req.url} success`,
         };
       }),
     );

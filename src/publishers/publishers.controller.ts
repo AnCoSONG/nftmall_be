@@ -53,9 +53,9 @@ export class PublishersController {
     @Param('id') id: string,
   ) {
     if (only_works) {
-      return this.publishersService.findOneWorks(+id);
+      return this.publishersService.findOneWorks(id);
     } else {
-      return this.publishersService.findOne(+id);
+      return this.publishersService.findOne(id);
     }
   }
 
@@ -77,11 +77,11 @@ export class PublishersController {
     @Param('id') id: string,
     @Body() updatePublisherDto: UpdatePublisherDto,
   ) {
-    return this.publishersService.update(+id, updatePublisherDto);
+    return this.publishersService.update(id, updatePublisherDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.publishersService.remove(+id);
+    return this.publishersService.remove(id);
   }
 }

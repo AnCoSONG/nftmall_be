@@ -6,10 +6,10 @@ export class Collector {
   @PrimaryGeneratedColumn('increment', { type: 'int', unsigned: true })
   id: number;
 
-  @Column({ type: 'varchar', length: 10 })
+  @Column({ type: 'varchar', length: 10, unique: true })
   username: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   bsn_address: string | null; // bsn_address is going to be set after create, this should be async
 
   @Column({ type: 'char', length: 11, unique: true })
@@ -27,8 +27,8 @@ export class Collector {
   @Column({ type: 'varchar', length: 18, nullable: true })
   real_id: string | null;
 
-  @Column({ type: 'float', default: 0.0, precision: 10, scale: 2 })
-  credit: number;
+  @Column({ type: 'decimal', default: '0.00', precision: 10, scale: 2 })
+  credit: string;
 
   @Column(() => DateAndVersion)
   meta: DateAndVersion;

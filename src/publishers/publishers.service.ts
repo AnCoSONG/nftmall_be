@@ -1,11 +1,15 @@
+import { InjectQueue } from '@nestjs/bull';
 import {
   BadRequestException,
   Injectable,
+  Logger,
   LoggerService,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Queue } from 'bull';
 import { Repository } from 'typeorm';
+import { BsnService } from '../bsn/bsn.service';
 import { sqlExceptionCatcher } from '../common/utils';
 import { CreateProductDto } from '../products/dto/create-product.dto';
 import { Product } from '../products/entities/product.entity';
@@ -16,21 +20,32 @@ import { Publisher } from './entities/publisher.entity';
 
 @Injectable()
 export class PublishersService {
+  private readonly logger = new Logger(PublishersService.name);
   constructor(
     @InjectRepository(Publisher)
     private readonly publisherRepository: Repository<Publisher>,
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
     private readonly productService: ProductsService,
+    private readonly bsnService: BsnService,
   ) {}
+
   async create(createPublisherDto: CreatePublisherDto) {
     const publisher = this.publisherRepository.create(createPublisherDto);
-
-    const createRes = await sqlExceptionCatcher(
-      this.publisherRepository.save(publisher),
-    );
-    // todo: 通过queue添加一个上链任务
-    return createRes;
+    const chainRes = await this.bsnService.create_account(`${publisher.name}`);
+    console.log(chainRes);
+    if (chainRes.code) {
+      throw new BadRequestException(chainRes.message);
+    } else {
+      publisher.bsn_address = chainRes.account;
+      const createRes = await sqlExceptionCatcher(
+        this.publisherRepository.save(publisher),
+      );
+      return {
+        createRes,
+        chainRes,
+      };
+    }
   }
 
   async findAll() {
@@ -50,7 +65,7 @@ export class PublishersService {
     return { data, total };
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const publisher = await sqlExceptionCatcher(
       this.publisherRepository.findOne(id, {
         relations: ['works'], // relations should be the field in entity
@@ -63,7 +78,7 @@ export class PublishersService {
   }
 
   async publishNewProduct(publisher_name, createProductDto: CreateProductDto) {
-    // must guarantee the product is not duplication of existing product
+    //* must guarantee the product is not duplication of existing product
     const publisher = await sqlExceptionCatcher(
       this.publisherRepository.findOne({
         name: publisher_name,
@@ -75,17 +90,30 @@ export class PublishersService {
       );
     }
     createProductDto.publisher_id = publisher.id;
-    //! 使用service的create语句，内部会对genre的重复性和自动添加做处理
+    console.log(createProductDto);
+    // 用这些参数申请创建一个nft_class
+    if (!publisher.bsn_address) {
+      throw new BadRequestException('publisher.bsn_address is not defined.');
+    }
+    const createNftClassRes = await this.bsnService.create_nft_class(
+      publisher.bsn_address,
+      createProductDto.name,
+    );
+    if (createNftClassRes.code) {
+      throw new BadRequestException(createNftClassRes.message);
+    } else {
+      // 通过队列去实现 nft_class_id 的设置
+    }
     return await this.productService.create(createProductDto);
   }
 
-  async findOneWorks(id: number) {
+  async findOneWorks(id: string) {
     const publisher = await this.findOne(id);
     return publisher.works;
   }
 
   async update(
-    id: number,
+    id: string,
     updatePublisherDto: Omit<UpdatePublisherDto, 'works'>,
   ) {
     const publisher = await this.findOne(id);
@@ -96,7 +124,7 @@ export class PublishersService {
     return await sqlExceptionCatcher(this.publisherRepository.save(merged));
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     const publisher = await this.findOne(id);
     return await sqlExceptionCatcher(
       this.publisherRepository.softRemove(publisher),

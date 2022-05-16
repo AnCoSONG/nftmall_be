@@ -25,5 +25,10 @@ export default () => {
     smscode: {
       expires_in: process.env.SMSCODE_EXPIRES_IN,
     },
+    bsn: {
+      api_key: process.env.BSN_API_KEY,
+      api_secret: process.env.BSN_API_SECRET,
+      api_url: process.env.BSN_API_URL,
+    },
   };
 };

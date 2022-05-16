@@ -1,5 +1,9 @@
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService, JwtVerifyOptions, JwtSignOptions } from '@nestjs/jwt';
 import Redis from 'ioredis';
 import { CollectorsService } from '../collectors/collectors.service';
@@ -129,6 +133,18 @@ export class AuthService {
         console.error(err);
         return AuthError.UNKNOWN; // 未知错误
       }
+    }
+  }
+
+  async logout(data: { id: number }) {
+    const { id } = data;
+    const del_res = await redisExceptionCatcher(this.redis.del(`token_${id}`));
+    if (del_res === 1) {
+      return 0;
+    } else if (del_res === 0) {
+      return 1;
+    } else {
+      return del_res;
     }
   }
 

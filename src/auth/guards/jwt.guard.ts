@@ -24,6 +24,7 @@ export class JwtGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     // const response = context.switchToHttp().getRequest<FastifyReply>();
 
+    // console.log(request.headers);
     // if (!request.headers['x-csrf-token']) {
     //   throw new UnauthorizedException('csrf token not found');
     // }

@@ -19,8 +19,8 @@ import { Publisher } from '../../publishers/entities/publisher.entity';
 
 @Entity()
 export class Product {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ type: 'varchar', length: 100 })
   name: string;
@@ -46,10 +46,10 @@ export class Product {
   tags: Tag[]; // 藏品标签，可能有多个
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
-  price: number;
+  price: string;
 
-  @Column({ type: 'text' })
-  details: string; // 存储富文本 或者 存储图像，存储图像的话就存成 <src>,<src>,<src>,<src>...
+  @Column({ type: 'json', default: null, nullable: true })
+  details: string[]; // 图像数组
 
   @Column({ type: 'smallint', unsigned: true })
   publish_count: number; // 发行数量
@@ -72,8 +72,17 @@ export class Product {
   @DeleteDateColumn({ type: 'timestamp' })
   delete_date: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamp', nullable: true, width: 6 })
   sale_timestamp: Date;
+
+  @Column({ type: 'timestamp', nullable: true, width: 6 })
+  draw_timestamp: Date;
+
+  @Column({ type: 'timestamp', nullable: true, width: 6 })
+  draw_end_timestamp: Date;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  nft_class_id: string | null; // 异步更新
 
   @Column({ nullable: true })
   publisher_id: number;

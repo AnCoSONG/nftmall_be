@@ -1,6 +1,15 @@
-import { DateAndVersion } from 'src/common/enities';
 import { Product } from 'src/products/entities/product.entity';
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
+} from 'typeorm';
 
 @Entity()
 export class ProductItem {
@@ -10,14 +19,29 @@ export class ProductItem {
   @Column({ type: 'smallint' })
   no: number;
 
+  @Column({ type: 'int' })
+  product_id: number;
+
   @ManyToOne(() => Product, (product) => product.items, {
     onDelete: 'CASCADE', //! when product is deleted, the product item of the product is deleted too.
   })
+  @JoinColumn({
+    name: 'product_id',
+  })
   product: Product;
 
-  @Column({ type: 'varchar', length: 100 })
-  bsn_address: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  bsn_address: string | null;
 
-  @Column(() => DateAndVersion)
-  meta: DateAndVersion;
+  @VersionColumn({ type: 'smallint', unsigned: true })
+  version: number;
+
+  @CreateDateColumn({ type: 'timestamp' })
+  create_date: Date;
+
+  @UpdateDateColumn({ type: 'timestamp' })
+  update_date: Date;
+
+  @DeleteDateColumn({ type: 'timestamp' })
+  delete_date: Date;
 }

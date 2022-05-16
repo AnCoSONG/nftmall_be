@@ -17,6 +17,9 @@ import { BullModule } from '@nestjs/bull';
 import config from './config';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { AuthModule } from './auth/auth.module';
+import { BsnModule } from './bsn/bsn.module';
+import { LibModule } from './lib/lib.module';
+import { AffairModule } from './affair/affair.module';
 
 @Module({
   imports: [
@@ -36,7 +39,7 @@ import { AuthModule } from './auth/auth.module';
         password: configService.get('database.password'),
         database: configService.get('database.database'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get('database.sync'),
+        synchronize: process.env.NODE_ENV === 'dev',
       }),
       inject: [ConfigService],
     }),
@@ -77,6 +80,9 @@ import { AuthModule } from './auth/auth.module';
     GenresModule,
     CollectionsModule,
     AuthModule,
+    BsnModule,
+    LibModule,
+    AffairModule,
   ],
   controllers: [AppController],
   providers: [AppService],

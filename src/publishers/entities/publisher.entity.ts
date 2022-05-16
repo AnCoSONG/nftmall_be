@@ -12,14 +12,17 @@ import { Product } from '../../products/entities/product.entity';
 
 @Entity()
 export class Publisher {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column({ type: 'varchar', length: 50, unique: true })
+  @Column({ type: 'varchar', length: 50 })
   name: string;
 
   @Column({ type: 'varchar', length: 255 })
   avatar: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  bsn_address: string | null;
 
   @VersionColumn({ type: 'smallint', unsigned: true })
   version: number;

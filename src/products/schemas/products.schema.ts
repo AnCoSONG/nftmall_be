@@ -7,7 +7,7 @@ export const CreateProductSchema = Joi.object({
   type: Joi.string()
     .valid('image', 'hybrid', '3d', 'audio', 'video')
     .required(),
-  price: Joi.number().required(),
+  price: Joi.string().required(),
   tags: Joi.array()
     .items(
       Joi.object({
@@ -16,7 +16,7 @@ export const CreateProductSchema = Joi.object({
       }),
     )
     .required(),
-  details: Joi.string().required(),
+  details: Joi.array(),
   publish_count: Joi.number().required(),
   stock_count: Joi.number().required(),
   limit: Joi.number().required(),
@@ -28,4 +28,5 @@ export const CreateProductSchema = Joi.object({
       }),
     )
     .allow(null),
+  sale_timestamp: Joi.date().required(),
 });

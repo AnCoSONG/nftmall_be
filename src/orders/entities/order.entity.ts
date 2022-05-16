@@ -1,6 +1,15 @@
 import { SupportPayment } from 'src/common/const';
-import { DateAndVersion } from 'src/common/enities';
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
+} from 'typeorm';
 
 @Entity()
 export class Order {
@@ -11,10 +20,13 @@ export class Order {
   buyer_id: number; // Collector ID
 
   @Column()
-  purchase_id: number; // ProductItem ID
+  product_id: number; // Product ID
 
-  @Column({ type: 'timestamp', nullable: true })
-  pay_date: Date;
+  @Column({ nullable: true })
+  product_item_id: string | null; // Product Item ID;
+
+  @Column({ type: 'timestamp', width: 6, nullable: true })
+  pay_timestamp: Date;
 
   @Column({ type: 'float', precision: 10, scale: 2 })
   gen_credit: number;
@@ -26,6 +38,15 @@ export class Order {
   })
   pay_method: SupportPayment;
 
-  @Column(() => DateAndVersion)
-  meta: DateAndVersion;
+  @VersionColumn({ type: 'smallint', unsigned: true })
+  version: number;
+
+  @CreateDateColumn({ type: 'timestamp' })
+  create_date: Date;
+
+  @UpdateDateColumn({ type: 'timestamp' })
+  update_date: Date;
+
+  @DeleteDateColumn({ type: 'timestamp' })
+  delete_date: Date;
 }

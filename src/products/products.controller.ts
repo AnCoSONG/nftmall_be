@@ -38,11 +38,11 @@ export class ProductsController {
     return this.productsService.list(page, limit);
   }
 
-  // 上链
-  @Get('/release/:id')
-  release(@Param('id', ParseIntPipe) id: string) {
-    return this.productsService.release(+id);
-  }
+  // // 上链
+  // @Get('/release/:id')
+  // release(@Param('id', ParseIntPipe) id: string) {
+  //   return this.productsService.release(+id);
+  // }
 
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: string) {

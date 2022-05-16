@@ -5,9 +5,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Product } from '../products/entities/product.entity';
 import { Publisher } from './entities/publisher.entity';
 import { ProductsModule } from '../products/products.module';
+import { BsnModule } from '../bsn/bsn.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Publisher, Product]), ProductsModule],
+  imports: [
+    TypeOrmModule.forFeature([Publisher, Product]),
+    ProductsModule,
+    BsnModule,
+  ],
   controllers: [PublishersController],
   providers: [PublishersService],
 })

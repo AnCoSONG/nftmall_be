@@ -36,6 +36,11 @@ export class CollectorsController {
     return this.collectorsService.findAll();
   }
 
+  @Post('/:id/apply')
+  async applyForChain(@Param('id', ParseIntPipe) id: string) {
+    return await this.collectorsService.applyForChain(+id);
+  }
+
   @Get('/by')
   findByPhone(@Query('phone') phone: string) {
     return this.collectorsService.findByPhone(phone);

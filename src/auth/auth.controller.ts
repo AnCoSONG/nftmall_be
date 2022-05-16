@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   //   BadRequestException,
   Body,
   Controller,
@@ -13,7 +14,7 @@ import { JoiValidationPipe } from '../pipes/joi-validation.pipe';
 import { AuthService } from './auth.service';
 import { LoginDto, LoginSchema } from './dto/login.dto';
 import { SendCodeDto, SendCodeSchema } from './dto/send-code.dto';
-import { FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyRequest, FastifyReply } from 'fastify';
 import { LocalGuard } from './guards/local.guard';
 import { AuthError } from '../common/const';
 import { JwtGuard } from './guards/jwt.guard';
@@ -37,7 +38,7 @@ export class AuthController {
   async login(
     @Req() req: FastifyRequest,
     @Body() loginDto: LoginDto,
-    // @Res({ passthrough: true }) res: FastifyReply,
+    @Res({ passthrough: true }) res: FastifyReply,
   ) {
     const data = await this.authService.login(loginDto);
     // 手动设置user.auth
@@ -48,7 +49,7 @@ export class AuthController {
       },
       code: AuthError.OK,
     };
-    // const d = await res.generateCsrf();
+    // const d = await res.generateCsrf({ domain: 'localhost', path: '/' });
     // console.log(d);
     // transform automatically set access_token and refresh_token cookie
     return data.collector;
@@ -58,6 +59,25 @@ export class AuthController {
   @UseGuards(JwtGuard)
   testJwt() {
     return 'hello, you are online.';
+  }
+
+  @Post('/logout/')
+  @UseGuards(JwtGuard)
+  async logout(
+    @Req() req: FastifyRequest,
+    @Body() data: { id: number },
+    @Res({ passthrough: true }) res: FastifyReply,
+  ) {
+    const logoutRes = await this.authService.logout(data);
+    if (logoutRes === 0 || logoutRes === 1) {
+      res.clearCookie('xc', { path: '/' });
+      res.clearCookie('tt', { path: '/' });
+      // 需要在logout设置req.user = undefined，因为如果退出时，用户刚好更新，就会覆盖掉退出的效果
+      req['user'] = undefined;
+      return 'logout success';
+    } else {
+      throw new BadRequestException('logout fail with del res ' + logoutRes);
+    }
   }
 
   @Get('/fetchUserInfo')

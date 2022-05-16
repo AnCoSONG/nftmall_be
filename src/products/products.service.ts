@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException, NotImplementedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  NotImplementedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { BsnService } from '../bsn/bsn.service';
 import { sqlExceptionCatcher } from '../common/utils';
 import { requestKeyErrorException } from '../exceptions';
 import { Genre } from '../genres/entities/genre.entity';
@@ -15,6 +20,7 @@ export class ProductsService {
     private readonly productRepository: Repository<Product>,
     @InjectRepository(Genre)
     private readonly genreRepository: Repository<Genre>,
+    private readonly bsnService: BsnService,
   ) {}
   async create(createProductDto: CreateProductDto) {
     if (!createProductDto.publisher_id) {
@@ -55,7 +61,7 @@ export class ProductsService {
     const [result, total] = await sqlExceptionCatcher(
       this.productRepository.findAndCount({
         order: { update_date: 'DESC' },
-        relations: ['genres'],
+        relations: ['genres', 'publisher'],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -66,26 +72,11 @@ export class ProductsService {
     };
   }
 
-  async release(id: number) {
-    // todo: 实现上链
-    // 1. 对id进行校验
-
-    // 2. 创建 Product-Item 对象 写入数据库
-
-    // 3. 通过 Queue 提交上链请求
-
-    // 4. Queue的回调完成上链请求包装
-
-    // 5. 上链后 将 BSN_address 写入数据库
-
-    // * PS: 这一套流程需要克隆一个类似的定时任务，已完成自动的上链
-
-    throw new NotImplementedException();
-  }
-
   async findOne(id: number) {
     const product = await sqlExceptionCatcher(
-      this.productRepository.findOne(id, { relations: ['genres'] }),
+      this.productRepository.findOne(id, {
+        relations: ['genres', 'publisher'],
+      }),
     );
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
