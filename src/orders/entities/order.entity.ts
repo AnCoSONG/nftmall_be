@@ -1,35 +1,53 @@
-import { SupportPayment } from 'src/common/const';
+import { PaymentStatus, SupportPayment } from 'src/common/const';
 import {
   Column,
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
-  OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
+import { Collector } from '../../collectors/entities/collector.entity';
+import { ProductItem } from '../../product-items/entities/product-item.entity';
 
 @Entity()
 export class Order {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
+  @Column({ type: 'varchar', length: 100 })
+  trade_no: string;
+
+  @Column({ type: 'int', unsigned: true })
   buyer_id: number; // Collector ID
 
-  @Column()
-  product_id: number; // Product ID
+  @ManyToOne(() => Collector, (collector) => collector.orders)
+  @JoinColumn({
+    name: 'buyer_id',
+  })
+  buyer: Collector;
 
-  @Column({ nullable: true })
-  product_item_id: string | null; // Product Item ID;
+  @Column()
+  product_item_id: string;
+
+  @OneToOne(() => ProductItem, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({
+    name: 'product_item_id',
+  })
+  product_item: ProductItem;
 
   @Column({ type: 'timestamp', width: 6, nullable: true })
-  pay_timestamp: Date;
+  pay_timestamp: Date | null;
 
-  @Column({ type: 'float', precision: 10, scale: 2 })
-  gen_credit: number;
+  // 支付完成的那个回调里自动设置
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: '0.00' })
+  gen_credit: string;
 
   @Column({
     type: 'enum',
@@ -37,6 +55,13 @@ export class Order {
     default: SupportPayment.WX,
   })
   pay_method: SupportPayment;
+
+  @Column({
+    type: 'enum',
+    enum: PaymentStatus,
+    default: PaymentStatus.UNPAID,
+  })
+  payment_status: PaymentStatus;
 
   @VersionColumn({ type: 'smallint', unsigned: true })
   version: number;

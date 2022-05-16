@@ -31,12 +31,14 @@ export class PublishersService {
   ) {}
 
   async create(createPublisherDto: CreatePublisherDto) {
+    // 上链 -> 创建
     const publisher = this.publisherRepository.create(createPublisherDto);
     const chainRes = await this.bsnService.create_account(`${publisher.name}`);
     console.log(chainRes);
     if (chainRes.code) {
       throw new BadRequestException(chainRes.message);
     } else {
+      // 上链成功
       publisher.bsn_address = chainRes.account;
       const createRes = await sqlExceptionCatcher(
         this.publisherRepository.save(publisher),
@@ -95,10 +97,10 @@ export class PublishersService {
     if (!publisher.bsn_address) {
       throw new BadRequestException('publisher.bsn_address is not defined.');
     }
-    const createNftClassRes = await this.bsnService.create_nft_class(
-      publisher.bsn_address,
-      createProductDto.name,
-    );
+    const createNftClassRes = await this.bsnService.create_nft_class({
+      owner: publisher.bsn_address,
+      name: createProductDto.name,
+    });
     if (createNftClassRes.code) {
       throw new BadRequestException(createNftClassRes.message);
     } else {
@@ -125,9 +127,10 @@ export class PublishersService {
   }
 
   async remove(id: string) {
+    //! danger: hard remove, do not use in production
     const publisher = await this.findOne(id);
     return await sqlExceptionCatcher(
-      this.publisherRepository.softRemove(publisher),
+      this.publisherRepository.remove(publisher),
     );
   }
 }

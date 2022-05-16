@@ -14,7 +14,6 @@ import { BsnService } from './bsn.service';
       }),
       inject: [ConfigService],
     }),
-    LibModule,
   ],
   providers: [BsnService],
   exports: [BsnService],

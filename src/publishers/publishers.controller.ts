@@ -59,17 +59,18 @@ export class PublishersController {
     }
   }
 
-  @Post('/publish')
-  @UsePipes(new JoiValidationPipe(PublishProductSchema))
-  publishNewProduct(
-    @Query('publisher_name') publisher_name: string,
-    @Body() createProductDto: CreateProductDto,
-  ) {
-    return this.publishersService.publishNewProduct(
-      publisher_name,
-      createProductDto,
-    );
-  }
+  //! publish已在affair内实现
+  // @Post('/publish')
+  // @UsePipes(new JoiValidationPipe(PublishProductSchema))
+  // publishNewProduct(
+  //   @Query('publisher_name') publisher_name: string,
+  //   @Body() createProductDto: CreateProductDto,
+  // ) {
+  //   return this.publishersService.publishNewProduct(
+  //     publisher_name,
+  //     createProductDto,
+  //   );
+  // }
 
   @Patch(':id')
   @UsePipes(new JoiValidationPipe(UpdatePublisherSchema))

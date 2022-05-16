@@ -15,5 +15,6 @@ import { BsnModule } from '../bsn/bsn.module';
   ],
   controllers: [PublishersController],
   providers: [PublishersService],
+  exports: [PublishersService],
 })
 export class PublishersModule {}

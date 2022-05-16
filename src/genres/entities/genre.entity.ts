@@ -13,6 +13,7 @@ export class Genre {
   name: string;
 
   @ManyToMany(() => Product, (product) => product.genres, {
+    onDelete: 'CASCADE',
     orphanedRowAction: 'delete',
   })
   products: Product[];

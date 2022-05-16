@@ -67,14 +67,14 @@ export class CreateProductDto {
 
   @ApiProperty({
     description: '商品发售数量',
-    example: 1000,
+    example: 10,
     required: false,
   })
   publish_count: number;
 
   @ApiProperty({
     description: '商品库存数量',
-    example: 1000,
+    example: 10,
     required: false,
   })
   stock_count: number;
@@ -109,15 +109,9 @@ export class CreateProductDto {
 
   @ApiProperty({
     description: '商品发行商',
-    required: true,
+    example: undefined,
   })
-  publisher_id: number;
-
-  @ApiProperty({
-    description: 'nft类别id',
-    required: true,
-  })
-  nft_class_id: string;
+  publisher_id?: string;
 
   @ApiProperty({
     description: '商品类别',

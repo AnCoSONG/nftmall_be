@@ -82,15 +82,15 @@ export class Product {
   draw_end_timestamp: Date;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  nft_class_id: string | null; // 异步更新
+  nft_class_id: string | null; // 由于bsn create nft class返回的是一个不缺的事务，因此需要加入队列动态去判断是否完成了处理，完成后才能上链
 
   @Column({ nullable: true })
-  publisher_id: number;
+  publisher_id: string;
 
   @ManyToOne(() => Publisher, (publisher) => publisher.works, {
     // https://stackoverflow.com/questions/55098023/typeorm-cascade-option-cascade-ondelete-onupdate
     onDelete: 'CASCADE', //! when publisher is deleted, the product of the publisher is deleted too.
-    orphanedRowAction: 'soft-delete', // 当publisher被删除时，被删除的product也会被删除
+    orphanedRowAction: 'delete', // 当publisher被删除时，被删除的product也会被删除
   })
   @JoinColumn({ name: 'publisher_id' })
   publisher: Publisher; // 发行商/创作者

@@ -68,7 +68,6 @@ export class BsnService {
       params_str +
       timestamp.toString() +
       this.configService.get<string>('bsn.api_secret');
-    console.log('intact', intact_str);
     return createHash('sha256').update(intact_str).digest('hex');
   }
 
@@ -80,7 +79,6 @@ export class BsnService {
   ) {
     try {
       const headers = this.get_headers(path, query, data);
-      console.log('header', headers, query, data);
       const res = await this.httpService
         .request({
           url: path,
@@ -95,7 +93,9 @@ export class BsnService {
       // console.log('request res.data.data', res.data.data);
       return res.data.data;
     } catch (err) {
-      this.logger.error(err);
+      this.logger.error(
+        `${err.response.data.error.code_space} - ${err.response.data.error.code} - ${err.response.data.error.message}`,
+      );
       return err.response.data;
     }
   }
@@ -154,53 +154,41 @@ export class BsnService {
     return await this.request(`/v1beta1/tx/${task_id}`, 'GET', {}, {});
   }
 
-  async create_nft_class(
-    owner: string,
-    name: string,
-    symbol?: string,
-    description?: string,
-    uri?: string,
-    uri_hash?: string,
-    data?: string,
-    tag?: Record<string, string>,
-  ): Promise<TxRes> {
+  async create_nft_class(data: {
+    owner: string;
+    name: string;
+    symbol?: string;
+    description?: string;
+    uri?: string;
+    uri_hash?: string;
+    data?: string;
+    tag?: Record<string, string>;
+  }): Promise<TxRes> {
     // console.log(getIdepmotentValue());
     const data_ = {
-      owner,
-      name,
-      symbol,
-      description,
-      uri,
-      uri_hash,
-      data,
-      tag,
+      ...data,
       operation_id: getIdepmotentValue(),
     };
     return await this.request('/v1beta1/nft/classes', 'POST', {}, data_);
   }
 
-  async get_nft_class(
-    offset = 0,
-    limit = 1,
-    id?: string,
-    name?: string,
-    owner?: string,
-    tx_hash?: string,
-    start_date?: string,
-    end_date?: string,
-    sort_by?: string,
-  ): Promise<GetNftClassesRes> {
+  async get_nft_class(payload: {
+    offset?: number;
+    limit?: number;
+    id?: string;
+    name?: string;
+    owner?: string;
+    tx_hash?: string;
+    start_date?: string;
+    end_date?: string;
+    sort_by?: 'DATE_ASC' | ' DATE_DESC';
+  }): Promise<GetNftClassesRes> {
     const query = {
-      offset: Math.max(offset, 0).toString(),
-      limit: Math.min(limit, 50).toString(),
-      id,
-      name,
-      owner,
-      tx_hash,
-      start_date,
-      end_date,
-      sort_by,
+      ...payload,
+      offset: payload.offset && Math.max(payload.offset, 0).toString(),
+      limit: payload.limit && Math.min(payload.limit, 50).toString(),
     };
+    console.log(query);
     return await this.request('/v1beta1/nft/classes', 'GET', query, {});
   }
 

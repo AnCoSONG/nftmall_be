@@ -1,26 +1,44 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { getIdepmotentValue, sqlExceptionCatcher } from '../common/utils';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { Order } from './entities/order.entity';
 
 @Injectable()
 export class OrdersService {
-  create(createOrderDto: CreateOrderDto) {
-    return 'This action adds a new order';
+  constructor(
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
+  ) {}
+  async create(createOrderDto: CreateOrderDto) {
+    const order = this.orderRepository.create(createOrderDto);
+    order.trade_no = getIdepmotentValue() + getIdepmotentValue();
+    return await sqlExceptionCatcher(this.orderRepository.save(order));
   }
 
-  findAll() {
-    return `This action returns all orders`;
+  async findAll() {
+    return await sqlExceptionCatcher(this.orderRepository.find());
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} order`;
+  async findOne(id: string) {
+    const order = await sqlExceptionCatcher(this.orderRepository.findOne(id));
+    if (!order) {
+      throw new NotFoundException(`Order with id ${id} was not found`);
+    }
+    return order;
   }
 
-  update(id: number, updateOrderDto: UpdateOrderDto) {
-    return `This action updates a #${id} order`;
+  async update(id: string, updateOrderDto: UpdateOrderDto) {
+    const order = await this.findOne(id);
+    const merged = this.orderRepository.merge(order, updateOrderDto);
+    return await sqlExceptionCatcher(this.orderRepository.save(merged));
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} order`;
+  async remove(id: string) {
+    //! hard remove, danger
+    const order = await this.findOne(id);
+    return await sqlExceptionCatcher(this.orderRepository.remove(order));
   }
 }

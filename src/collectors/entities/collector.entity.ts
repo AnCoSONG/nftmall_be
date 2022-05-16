@@ -1,5 +1,6 @@
 import { DateAndVersion } from 'src/common/enities';
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Order } from '../../orders/entities/order.entity';
 
 @Entity()
 export class Collector {
@@ -29,6 +30,11 @@ export class Collector {
 
   @Column({ type: 'decimal', default: '0.00', precision: 10, scale: 2 })
   credit: string;
+
+  @OneToMany(() => Order, (order) => order.buyer, {
+    cascade: true,
+  })
+  orders: Order[];
 
   @Column(() => DateAndVersion)
   meta: DateAndVersion;

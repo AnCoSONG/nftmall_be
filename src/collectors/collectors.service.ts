@@ -68,12 +68,12 @@ export class CollectorsService {
 
   async update(id: number, updateCollectorDto: UpdateCollectorDto) {
     const collector = await this.findOne(id);
-    console.log(updateCollectorDto);
+    // console.log(updateCollectorDto);
     const merged = this.collectorRepository.merge(
       collector,
       updateCollectorDto,
     );
-    console.log('merged', merged);
+    // console.log('merged', merged);
     return await sqlExceptionCatcher(this.collectorRepository.save(merged));
   }
 

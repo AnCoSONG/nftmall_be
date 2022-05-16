@@ -21,9 +21,15 @@ export class Publisher {
   @Column({ type: 'varchar', length: 255 })
   avatar: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  bsn_address: string | null;
+  @Column({ type: 'varchar', length: 255 })
+  bsn_address: string;
 
+  @OneToMany(() => Product, (product) => product.publisher, {
+    cascade: true, // 在oneToMany开启级联，添加Product时会自动向Product表里添加记录
+  })
+  works: Product[];
+
+  //* 附加信息
   @VersionColumn({ type: 'smallint', unsigned: true })
   version: number;
 
@@ -35,9 +41,4 @@ export class Publisher {
 
   @DeleteDateColumn({ type: 'timestamp' })
   delete_date: Date;
-
-  @OneToMany(() => Product, (product) => product.publisher, {
-    cascade: true, // 在oneToMany开启级联，添加Product时会自动向Product表里添加记录
-  })
-  works: Product[];
 }

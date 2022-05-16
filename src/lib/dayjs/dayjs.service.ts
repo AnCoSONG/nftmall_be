@@ -8,7 +8,11 @@ export class DayjsService {
     return this.dayjs().valueOf();
   }
 
-  utc_format(utc: string|number, format: string): string {
-    return this.dayjs(utc).format(format);
+  utc_format(utc: any, format?: string): string {
+    return this.dayjs(utc).format(format ?? undefined);
+  }
+
+  dayjsify(data?: any) {
+    return this.dayjs(data);
   }
 }

@@ -1,7 +1,7 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
-  NotImplementedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -22,10 +22,20 @@ export class ProductsService {
     private readonly genreRepository: Repository<Genre>,
     private readonly bsnService: BsnService,
   ) {}
-  async create(createProductDto: CreateProductDto) {
+  async create(createProductDto: CreateProductDto): Promise<Product> {
     if (!createProductDto.publisher_id) {
       // 理论上不需要这一行验证，因为在创建时，publisher_id是必须的
       throw new requestKeyErrorException('publisher_id is required');
+    }
+    if (
+      !(
+        createProductDto.draw_end_timestamp > createProductDto.draw_timestamp &&
+        createProductDto.draw_end_timestamp < createProductDto.sale_timestamp
+      )
+    ) {
+      throw new BadRequestException(
+        'timestamp should be like: draw timestamp < draw end timestamp < sale timestamp',
+      );
     }
     const product = this.productRepository.create(createProductDto);
     if (createProductDto.genres) {
@@ -72,7 +82,7 @@ export class ProductsService {
     };
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const product = await sqlExceptionCatcher(
       this.productRepository.findOne(id, {
         relations: ['genres', 'publisher'],
@@ -84,7 +94,7 @@ export class ProductsService {
     return product;
   }
 
-  async update(id: number, updateProductDto: UpdateProductDto) {
+  async update(id: string, updateProductDto: UpdateProductDto) {
     const product = await this.findOne(id);
     const merged = this.productRepository.merge(product, updateProductDto);
     if (updateProductDto.genres) {
@@ -105,10 +115,9 @@ export class ProductsService {
     return await sqlExceptionCatcher(this.productRepository.save(merged));
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
+    ///! danger: hard remove, do not use in production
     const product = await this.findOne(id);
-    return await sqlExceptionCatcher(
-      this.productRepository.softRemove(product),
-    );
+    return await sqlExceptionCatcher(this.productRepository.remove(product));
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { sqlExceptionCatcher } from '../common/utils';
@@ -23,23 +23,21 @@ export class NoticesService {
   }
 
   async findOne(id: number) {
-    return await sqlExceptionCatcher(this.noticeRepository.findOne(id));
+    const notice = await sqlExceptionCatcher(this.noticeRepository.findOne(id));
+    if (!notice) {
+      throw new NotFoundException(`Notice with ${id} was not found`);
+    }
+    return notice;
   }
 
   async update(id: number, updateNoticeDto: UpdateNoticeDto) {
     const notice = await this.findOne(id);
-    if (!notice) {
-      throw new Error('公告不存在');
-    }
     const merged = this.noticeRepository.merge(notice, updateNoticeDto);
     return await sqlExceptionCatcher(this.noticeRepository.save(merged));
   }
 
   async remove(id: number) {
     const notice = await this.findOne(id);
-    if (!notice) {
-      throw new Error('公告不存在');
-    }
     return await sqlExceptionCatcher(this.noticeRepository.softRemove(notice));
   }
 }

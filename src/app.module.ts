@@ -20,7 +20,25 @@ import { AuthModule } from './auth/auth.module';
 import { BsnModule } from './bsn/bsn.module';
 import { LibModule } from './lib/lib.module';
 import { AffairModule } from './affair/affair.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import Redis, { Callback, Result } from 'ioredis';
 
+declare module 'ioredis' {
+  interface RedisCommander<Context> {
+    seckill(
+      lucky_set_key: string,
+      stock_key: string,
+      buy_set_key: string,
+      argv: number,
+      callback?: Callback<number>,
+    ): Result<number, Context>;
+    myecho(
+      key: string,
+      argv: number,
+      callback?: Callback<number>,
+    ): Result<number, Context>;
+  }
+}
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -66,6 +84,19 @@ import { AffairModule } from './affair/affair.module';
           port: +configService.get<number>('redis.port'),
           password: configService.get('redis.password'),
           db: 0, // for cache
+          onClientCreated(client: Redis) {
+            client.defineCommand('myecho', {
+              numberOfKeys: 1,
+              lua: 'return {KEYS[1],ARGV[1]}',
+            });
+            client.defineCommand('seckill', {
+              //! 目前只能购买一个
+              // todo: 修改redis脚本支持多个
+              // 1. 库存是否<=0 2. 是否有资格 3. 是否已购买 4. 更新库存 5. 添加用户到buyset 6. 返回新库存
+              lua: `local stock = tonumber(redis.call('get', KEYS[2]))\nif (stock <= 0) then return -1 end\nlocal res1 = redis.call('sismember', KEYS[1], ARGV[1]) \nif (res1 == 0) then return -2 end \nlocal bought = redis.call('sismember',KEYS[3], ARGV[1])\nif (bought == 1) then return -3 end\nlocal newstock = redis.call('decr', KEYS[2]) \n if (newstock < 0) then return -1 end \nredis.call('sadd', KEYS[3], ARGV[1])\nreturn newstock \n`,
+              numberOfKeys: 3,
+            });
+          },
         },
       }),
     }),
@@ -83,6 +114,7 @@ import { AffairModule } from './affair/affair.module';
     BsnModule,
     LibModule,
     AffairModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -3,6 +3,12 @@ export enum SupportPayment {
   ALI = 'alipay',
 }
 
+export enum PaymentStatus {
+  UNPAID = 'unpaid',
+  PAID = 'paid',
+  CANCELED = 'canceled',
+}
+
 export enum SupportType {
   IMAGE = 'image',
   VIDEO = 'video',
