@@ -40,6 +40,7 @@ export class AffairController {
     return this.affairService.clearSeckillCache(product_id);
   }
 
+  //todo:DTO
   @Post('/seckill')
   seckill(@Body() seckillDto: { product_id: string; collector_id: number }) {
     return this.affairService.seckill(
@@ -48,6 +49,7 @@ export class AffairController {
     );
   }
 
+  //todo:DTO
   @Post('/draw')
   @Throttle(500, 60)
   @UseGuards(ThrottlerBehindProxyGuard)
