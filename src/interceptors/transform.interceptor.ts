@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   HttpStatus,
   Injectable,
+  Logger,
   NestInterceptor,
 } from '@nestjs/common';
 import { map, Observable } from 'rxjs';
@@ -10,10 +11,11 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 
 @Injectable()
 export class TransformInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(TransformInterceptor.name);
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest<FastifyRequest>();
     const res = context.switchToHttp().getResponse<FastifyReply>();
-    console.log('req.user', req['user']);
+    this.logger.log('req.user: ' + JSON.stringify(req['user']));
     // console.log(req.raw.url, req.context.config.url, req.url);
     // change post response with 200, so that all success response codes are the same.
     if (req.method === 'POST') res.statusCode = HttpStatus.OK;
@@ -21,7 +23,8 @@ export class TransformInterceptor implements NestInterceptor {
       map((data) => {
         // set auth info in cookie for safty
         if (req['user'] && req['user'].data) {
-          res.log.info('updating tokens', req['user']);
+          this.logger.log('updating tokens', req['user']);
+          // res.log.info('updating tokens', req['user']);
           res.cookie('tt', req['user'].data.refresh_token, {
             maxAge: 1000 * 60 * 60 * 24 * 15,
             httpOnly: true,

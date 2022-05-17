@@ -111,7 +111,7 @@ export class CreateProductDto {
     description: '商品发行商',
     example: undefined,
   })
-  publisher_id?: string;
+  publisher_id: string;
 
   @ApiProperty({
     description: '商品类别',

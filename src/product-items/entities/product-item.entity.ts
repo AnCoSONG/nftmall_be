@@ -10,6 +10,7 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
+import { Collector } from '../../collectors/entities/collector.entity';
 
 @Entity()
 export class ProductItem {
@@ -30,6 +31,17 @@ export class ProductItem {
     name: 'product_id',
   })
   product: Product;
+
+  @Column({ type: 'int', unsigned: true, nullable: true, default: null })
+  owner_id: number | null;
+
+  @ManyToOne(() => Collector, (collector) => collector.collections, {
+    onDelete: 'NO ACTION',
+  })
+  @JoinColumn({
+    name: 'owner_id',
+  })
+  owner: Collector;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   nft_id: string | null; // 链上ID 上链后才有 前端先 根据订单支付时间来判断是否已支付，根据nft_id来判断是否已上链

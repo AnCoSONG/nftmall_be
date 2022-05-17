@@ -1,5 +1,4 @@
 export default () => {
-  // console.log(process.env.DATABASE_SYNC);
   return {
     database: {
       host: process.env.DATABASE_HOST,
@@ -29,6 +28,10 @@ export default () => {
       api_key: process.env.BSN_API_KEY,
       api_secret: process.env.BSN_API_SECRET,
       api_url: process.env.BSN_API_URL,
+    },
+    idcheck: {
+      api_code: process.env.IDCHECK_API_CODE,
+      api_url: process.env.IDCHECK_API_URL,
     },
   };
 };

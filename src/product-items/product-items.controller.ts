@@ -20,27 +20,32 @@ import { ApiTags } from '@nestjs/swagger';
 export class ProductItemsController {
   constructor(private readonly productItemsService: ProductItemsService) {}
 
-  @Post()
-  create(@Body() createProductItemDto: CreateProductItemDto) {
-    return this.productItemsService.create(createProductItemDto);
-  }
+  //! cannot create product-item sololy
+  // @Post()
+  // create(@Body() createProductItemDto: CreateProductItemDto) {
+  //   return this.productItemsService.create(createProductItemDto);
+  // }
 
   @Get()
-  findAll() {
-    return this.productItemsService.findAll();
+  findAll(@Query('with_relation') withRelation: boolean) {
+    return this.productItemsService.findAll(withRelation);
   }
 
   @Get('/list')
   list(
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
+    @Query('with_relation') withRelation: boolean,
   ) {
-    return this.productItemsService.list(page, limit);
+    return this.productItemsService.list(page, limit, withRelation);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.productItemsService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('with_relation') withRelation: boolean,
+  ) {
+    return this.productItemsService.findOne(id, withRelation);
   }
 
   @Patch(':id')

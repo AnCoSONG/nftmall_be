@@ -40,7 +40,7 @@ export class AffairProcessor {
     }
     // finished
     if (tx_res.class_id && tx_res.class_id !== '') {
-      this.logger.log('create nft complete');
+      this.logger.log('create nft class complete');
       const updateRes = await this.productsService.update(job.data.product_id, {
         nft_class_id: tx_res.class_id,
       });
@@ -94,5 +94,33 @@ export class AffairProcessor {
       `queue:status:create-product-items:${job.data.product_id}`,
       'failed',
     );
+  }
+
+  @Process('update-product-item-nft-id')
+  async updateProductItemNftId(job: Job) {
+    // 拉取新的事务结果
+    this.logger.log('try to update product item nft id');
+    const tx_res = await this.bsnService.get_transactions(
+      job.data.operation_id,
+    );
+    if (tx_res.code) {
+      this.logger.warn('get tx error, ' + tx_res.code);
+      throw new BadRequestException('Get Tx Error');
+    }
+    if (tx_res.status !== 1) {
+      this.logger.warn('update nft id incomplete, ' + tx_res.status);
+      throw new BadRequestException('Update nft id has not finished.');
+    }
+    // 更新
+    const updateRes = await this.productItemsService.update(
+      job.data.product_item_id,
+      {
+        nft_id: tx_res.nft_id,
+      },
+    );
+    this.logger.log(
+      `update nft id of ${job.data.product_item_id} with ${tx_res.nft_id} complete`,
+    );
+    return updateRes;
   }
 }

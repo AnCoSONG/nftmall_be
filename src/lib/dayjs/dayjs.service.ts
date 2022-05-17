@@ -15,4 +15,8 @@ export class DayjsService {
   dayjsify(data?: any) {
     return this.dayjs(data);
   }
+
+  date(): Date {
+    return this.dayjs().toDate();
+  }
 }

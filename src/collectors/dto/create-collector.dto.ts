@@ -12,7 +12,13 @@ export class CreateCollectorDto {
     example: 'https://avatars.dicebear.com/api/pixel-art/random.svg',
   })
   avatar: string;
+}
 
-  @ApiProperty({ description: '区块链地址', example: null })
-  bsn_address?: string;
+export class IDCheckDto {
+  @ApiProperty({ description: '用户ID', example: 1 })
+  id: number;
+  @ApiProperty({ description: '身份证号', example: '420102198001010012' })
+  id_card: string;
+  @ApiProperty({ description: '姓名', example: '张三' })
+  name: string;
 }

@@ -1,7 +1,6 @@
 import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { LibModule } from '../lib/lib.module';
 import { BsnService } from './bsn.service';
 
 @Module({

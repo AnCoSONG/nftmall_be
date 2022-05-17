@@ -30,16 +30,17 @@ export class GenresController {
   }
 
   @Get()
-  findAll(@Query('with_products', ParseBoolPipe) withProducts: boolean) {
-    return this.genresService.findAll(withProducts);
+  findAll(@Query('with_relation', ParseBoolPipe) withRelation: boolean) {
+    return this.genresService.findAll(withRelation);
   }
 
   @Get('/list')
   list(
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
+    @Query('with_relation', ParseBoolPipe) withRelation: boolean,
   ) {
-    return this.genresService.list(page, limit);
+    return this.genresService.list(page, limit, withRelation);
   }
 
   @Get(':id')

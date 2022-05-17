@@ -15,11 +15,10 @@ import { PublishersService } from './publishers.service';
 import { CreatePublisherDto } from './dto/create-publisher.dto';
 import { UpdatePublisherDto } from './dto/update-publisher.dto';
 import { ApiTags } from '@nestjs/swagger';
-import { CreateProductDto } from '../products/dto/create-product.dto';
+// import { CreateProductDto } from '../products/dto/create-product.dto';
 import { JoiValidationPipe } from '../pipes/joi-validation.pipe';
 import {
   CreatePublisherSchema,
-  PublishProductSchema,
   UpdatePublisherSchema,
 } from './schemas/publishers.schema';
 
@@ -43,8 +42,9 @@ export class PublishersController {
   list(
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
+    @Query('with_relation', ParseBoolPipe) with_relation: boolean,
   ) {
-    return this.publishersService.list(page, limit);
+    return this.publishersService.list(page, limit, with_relation);
   }
 
   @Get(':id')

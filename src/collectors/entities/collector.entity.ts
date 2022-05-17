@@ -1,6 +1,15 @@
-import { DateAndVersion } from 'src/common/enities';
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
+} from 'typeorm';
 import { Order } from '../../orders/entities/order.entity';
+import { ProductItem } from '../../product-items/entities/product-item.entity';
 
 @Entity()
 export class Collector {
@@ -36,6 +45,20 @@ export class Collector {
   })
   orders: Order[];
 
-  @Column(() => DateAndVersion)
-  meta: DateAndVersion;
+  @OneToMany(() => ProductItem, (product_item) => product_item.owner, {
+    cascade: true,
+  })
+  collections: ProductItem[];
+
+  @VersionColumn({ type: 'smallint', unsigned: true })
+  version: number;
+
+  @CreateDateColumn({ type: 'timestamp' })
+  create_date: Date;
+
+  @UpdateDateColumn({ type: 'timestamp' })
+  update_date: Date;
+
+  @DeleteDateColumn({ type: 'timestamp' })
+  delete_date: Date;
 }

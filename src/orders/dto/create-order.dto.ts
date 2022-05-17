@@ -7,6 +7,9 @@ export class CreateOrderDto {
   @ApiProperty({ example: 'qweqewqe' })
   product_item_id: string;
 
+  @ApiProperty({ example: '0.00' })
+  sum_price: string;
+
   //   @ApiProperty()
   //   gen_credit: number;
 }

@@ -11,6 +11,7 @@ import { Queue } from 'bull';
 import { Repository } from 'typeorm';
 import { BsnService } from '../bsn/bsn.service';
 import { sqlExceptionCatcher } from '../common/utils';
+import { requestKeyErrorException } from '../exceptions';
 import { CreateProductDto } from '../products/dto/create-product.dto';
 import { Product } from '../products/entities/product.entity';
 import { ProductsService } from '../products/products.service';
@@ -56,15 +57,20 @@ export class PublishersService {
     );
   }
 
-  async list(page: number, limit: number) {
+  async list(page: number, limit: number, with_relation = false) {
+    if (page <= 0 || limit <= 0) {
+      throw new requestKeyErrorException(
+        'page and limit must be greater than 0',
+      );
+    }
     const [data, total] = await sqlExceptionCatcher(
       this.publisherRepository.findAndCount({
-        relations: ['works'],
+        relations: with_relation ? ['works'] : [],
         skip: (page - 1) * limit,
         take: limit,
       }),
     );
-    return { data, total };
+    return { data, total, page, limit };
   }
 
   async findOne(id: string) {

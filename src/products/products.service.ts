@@ -9,6 +9,7 @@ import { BsnService } from '../bsn/bsn.service';
 import { sqlExceptionCatcher } from '../common/utils';
 import { requestKeyErrorException } from '../exceptions';
 import { Genre } from '../genres/entities/genre.entity';
+import { DayjsService } from '../lib/dayjs/dayjs.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
@@ -21,20 +22,30 @@ export class ProductsService {
     @InjectRepository(Genre)
     private readonly genreRepository: Repository<Genre>,
     private readonly bsnService: BsnService,
+    private readonly dayjsService: DayjsService,
   ) {}
   async create(createProductDto: CreateProductDto): Promise<Product> {
+    //* 验证是否提交了publisher_id
     if (!createProductDto.publisher_id) {
       // 理论上不需要这一行验证，因为在创建时，publisher_id是必须的
       throw new requestKeyErrorException('publisher_id is required');
     }
+    //* 验证timestamp是否合理
     if (
       !(
-        createProductDto.draw_end_timestamp > createProductDto.draw_timestamp &&
-        createProductDto.draw_end_timestamp < createProductDto.sale_timestamp
+        // 验证timestamp是否按照正确大小顺序
+        (
+          createProductDto.draw_end_timestamp >
+            createProductDto.draw_timestamp &&
+          createProductDto.draw_end_timestamp <
+            createProductDto.sale_timestamp &&
+          this.dayjsService.dayjsify(createProductDto.draw_timestamp) >
+            this.dayjsService.dayjsify()
+        )
       )
     ) {
       throw new BadRequestException(
-        'timestamp should be like: draw timestamp < draw end timestamp < sale timestamp',
+        'timestamp should be like: Now < draw timestamp < draw end timestamp < sale timestamp',
       );
     }
     const product = this.productRepository.create(createProductDto);
@@ -62,30 +73,32 @@ export class ProductsService {
   }
 
   // cache last total and compare to page
-  async list(page: number, limit: number) {
+  async list(page: number, limit: number, with_relation = false) {
     if (page <= 0 || limit <= 0) {
       throw new requestKeyErrorException(
         'page and limit must be greater than 0',
       );
     }
-    const [result, total] = await sqlExceptionCatcher(
+    const [data, total] = await sqlExceptionCatcher(
       this.productRepository.findAndCount({
         order: { update_date: 'DESC' },
-        relations: ['genres', 'publisher'],
+        relations: with_relation ? ['genres', 'publisher'] : [],
         skip: (page - 1) * limit,
         take: limit,
       }),
     );
     return {
-      data: result,
+      data,
       total,
+      page,
+      limit,
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, with_relation?: boolean) {
     const product = await sqlExceptionCatcher(
       this.productRepository.findOne(id, {
-        relations: ['genres', 'publisher'],
+        relations: with_relation ? ['genres', 'publisher'] : undefined,
       }),
     );
     if (!product) {

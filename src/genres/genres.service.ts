@@ -26,19 +26,25 @@ export class GenresService {
     );
   }
 
-  async list(page: number, limit: number) {
+  async list(page: number, limit: number, with_relation = false) {
     if (page <= 0 || limit <= 0) {
       throw new requestKeyErrorException(
         'page and limit must be greater than 0',
       );
     }
-    return await sqlExceptionCatcher(
-      this.genreRepository.find({
-        relations: ['products'],
+    const [data, total] = await sqlExceptionCatcher(
+      this.genreRepository.findAndCount({
+        relations: with_relation ? ['products'] : [],
         skip: (page - 1) * limit,
         take: limit,
       }),
     );
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
   }
 
   async findOne(id: number) {

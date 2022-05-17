@@ -23,6 +23,7 @@
   "dependencies": {
     "@fastify/compress": "^5.0.0",
     "@fastify/cookie": "^6.0.0",
+    "@fastify/cors": "^7.0.0",
     "@fastify/helmet": "^8.0.0",
     "@liaoliaots/nestjs-redis": "^8.1.1",
     "@nestjs/axios": "^0.0.7",
@@ -36,6 +37,7 @@
     "@nestjs/platform-fastify": "^8.4.4",
     "@nestjs/schedule": "^1.1.0",
     "@nestjs/swagger": "^5.2.1",
+    "@nestjs/throttler": "^2.0.1",
     "@nestjs/typeorm": "^8.0.3",
     "bull": "^4.8.2",
     "dayjs": "^1.11.1",
@@ -45,6 +47,7 @@
     "ioredis": "^5.0.4",
     "joi": "^17.6.0",
     "mysql2": "^2.3.3",
+    "nestjs-throttler-storage-redis": "^0.1.19",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^7.2.0",

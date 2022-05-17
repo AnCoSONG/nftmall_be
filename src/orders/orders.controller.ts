@@ -6,6 +6,9 @@ import {
   Patch,
   Param,
   Delete,
+  ParseIntPipe,
+  Query,
+  ParseBoolPipe,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -17,14 +20,24 @@ import { ApiTags } from '@nestjs/swagger';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  @Post()
-  create(@Body() createOrderDto: CreateOrderDto) {
-    return this.ordersService.create(createOrderDto);
-  }
+  //! cannot create order sololy, order is created when collector seckill the product
+  // @Post()
+  // create(@Body() createOrderDto: CreateOrderDto) {
+  //   return this.ordersService.create(createOrderDto);
+  // }
 
   @Get()
   findAll() {
     return this.ordersService.findAll();
+  }
+
+  @Get('/list')
+  list(
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
+    @Query('with_relation', ParseBoolPipe) withRelation: boolean,
+  ) {
+    return this.ordersService.list(page, limit, withRelation);
   }
 
   @Get(':id')

@@ -15,13 +15,19 @@ import { GenresModule } from './genres/genres.module';
 import { CollectionsModule } from './collections/collections.module';
 import { BullModule } from '@nestjs/bull';
 import config from './config';
-import { RedisModule } from '@liaoliaots/nestjs-redis';
+import {
+  DEFAULT_REDIS_NAMESPACE,
+  RedisModule,
+  RedisService,
+} from '@liaoliaots/nestjs-redis';
 import { AuthModule } from './auth/auth.module';
 import { BsnModule } from './bsn/bsn.module';
 import { LibModule } from './lib/lib.module';
 import { AffairModule } from './affair/affair.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import Redis, { Callback, Result } from 'ioredis';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from 'nestjs-throttler-storage-redis';
 
 declare module 'ioredis' {
   interface RedisCommander<Context> {
@@ -29,11 +35,6 @@ declare module 'ioredis' {
       lucky_set_key: string,
       stock_key: string,
       buy_set_key: string,
-      argv: number,
-      callback?: Callback<number>,
-    ): Result<number, Context>;
-    myecho(
-      key: string,
       argv: number,
       callback?: Callback<number>,
     ): Result<number, Context>;
@@ -85,10 +86,6 @@ declare module 'ioredis' {
           password: configService.get('redis.password'),
           db: 0, // for cache
           onClientCreated(client: Redis) {
-            client.defineCommand('myecho', {
-              numberOfKeys: 1,
-              lua: 'return {KEYS[1],ARGV[1]}',
-            });
             client.defineCommand('seckill', {
               //! 目前只能购买一个
               // todo: 修改redis脚本支持多个
@@ -99,6 +96,17 @@ declare module 'ioredis' {
           },
         },
       }),
+    }),
+    ThrottlerModule.forRootAsync({
+      useFactory(redisService: RedisService) {
+        const redis = redisService.getClient(DEFAULT_REDIS_NAMESPACE);
+        return {
+          ttl: 60,
+          limit: 10,
+          storage: new ThrottlerStorageRedisService(redis),
+        };
+      },
+      inject: [RedisService],
     }),
     CollectorsModule,
     ProductsModule,

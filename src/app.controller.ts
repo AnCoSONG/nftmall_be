@@ -1,6 +1,8 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AppService } from './app.service';
 import { BsnService } from './bsn/bsn.service';
+import { ThrottlerBehindProxyGuard } from './guards/throttler-behind-proxy.guard';
 // import { FastifyReply } from 'fastify';
 
 @Controller()
@@ -15,7 +17,10 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  // 测试限速
   @Get('/test-redis')
+  @Throttle(20, 60)
+  @UseGuards(ThrottlerBehindProxyGuard)
   testRedis() {
     return this.appService.testRedis();
   }
@@ -45,11 +50,12 @@ export class AppController {
     return this.bsnService.get_transactions('xfcvimgcuq11ro4128p8');
   }
 
-  @Get('/test3')
+  @Get('/get_accounts')
   test3() {
-    return this.bsnService.get_accounts(
-      'iaa1u7gdwe54dz5y0gtw275fl558u0x2c9cju9xryz',
-    );
+    // return this.bsnService.get_accounts(
+    //   'iaa1u7gdwe54dz5y0gtw275fl558u0x2c9cju9xryz',
+    // );
+    return this.bsnService.get_accounts({ limit: 50 });
     // return this.bsnService.get_accounts();
   }
 

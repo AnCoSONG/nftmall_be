@@ -31,8 +31,8 @@ export class Order {
   })
   buyer: Collector;
 
-  @Column()
-  product_item_id: string;
+  @Column({ nullable: true })
+  product_item_id: string | null;
 
   @OneToOne(() => ProductItem, {
     onDelete: 'CASCADE',
@@ -42,12 +42,15 @@ export class Order {
   })
   product_item: ProductItem;
 
+  @Column({ nullable: true })
+  backup_product_item_id: string | null; // 备份product_item_id，cancel后依然可以找到之前抢中的product_item
+
   @Column({ type: 'timestamp', width: 6, nullable: true })
   pay_timestamp: Date | null;
 
   // 支付完成的那个回调里自动设置
   @Column({ type: 'decimal', precision: 10, scale: 2, default: '0.00' })
-  gen_credit: string;
+  sum_price: string;
 
   @Column({
     type: 'enum',

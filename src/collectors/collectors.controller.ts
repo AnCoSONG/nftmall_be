@@ -9,11 +9,12 @@ import {
   UsePipes,
   ParseIntPipe,
   Query,
+  ParseBoolPipe,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { JoiValidationPipe } from '../pipes/joi-validation.pipe';
 import { CollectorsService } from './collectors.service';
-import { CreateCollectorDto } from './dto/create-collector.dto';
+import { CreateCollectorDto, IDCheckDto } from './dto/create-collector.dto';
 import { UpdateCollectorDto } from './dto/update-collector.dto';
 import {
   CreateCollectorSchema,
@@ -32,8 +33,22 @@ export class CollectorsController {
   }
 
   @Get()
-  findAll() {
-    return this.collectorsService.findAll();
+  findAll(@Query('with_relation') withRelation: boolean) {
+    return this.collectorsService.findAll(withRelation);
+  }
+
+  @Get('/list')
+  list(
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
+    @Query('with_relation', ParseBoolPipe) with_relation: boolean,
+  ) {
+    return this.collectorsService.list(page, limit, with_relation);
+  }
+
+  @Get('/:id/collections')
+  async getCollections(@Param('id', ParseIntPipe) id: string) {
+    return await this.collectorsService.getCollections(+id);
   }
 
   @Post('/:id/apply')
@@ -41,14 +56,29 @@ export class CollectorsController {
     return await this.collectorsService.applyForChain(+id);
   }
 
-  @Get('/by')
-  findByPhone(@Query('phone') phone: string) {
-    return this.collectorsService.findByPhone(phone);
+  @Get('/byPhone')
+  findByPhone(
+    @Query('phone') phone: string,
+    @Query('with_relation', ParseBoolPipe) with_relation: boolean,
+  ) {
+    return this.collectorsService.findByPhone(phone, with_relation);
+  }
+
+  @Post('/idcheck')
+  idcheck(@Body() idcheckDto: IDCheckDto) {
+    return this.collectorsService.idcheck(
+      idcheckDto.name,
+      idcheckDto.id_card,
+      idcheckDto.id,
+    );
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: string) {
-    return this.collectorsService.findOne(+id);
+  findOne(
+    @Param('id', ParseIntPipe) id: string,
+    @Query('with_relation', ParseBoolPipe) with_relation: boolean,
+  ) {
+    return this.collectorsService.findOne(+id, with_relation);
   }
 
   @Patch(':id')

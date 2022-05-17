@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Query,
   ParseUUIDPipe,
+  ParseBoolPipe,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -20,11 +21,12 @@ import { ApiTags } from '@nestjs/swagger';
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
+  //! cannot create product sololy
   // 创建藏品系列时，需要手动输入正确的Publisher ID
-  @Post()
-  create(@Body() createProductDto: CreateProductDto) {
-    return this.productsService.create(createProductDto);
-  }
+  // @Post()
+  // create(@Body() createProductDto: CreateProductDto) {
+  //   return this.productsService.create(createProductDto);
+  // }
 
   @Get()
   findAll() {
@@ -35,8 +37,9 @@ export class ProductsController {
   list(
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
+    @Query('with_relation', ParseBoolPipe) with_relation: boolean,
   ) {
-    return this.productsService.list(page, limit);
+    return this.productsService.list(page, limit, with_relation);
   }
 
   // // 上链

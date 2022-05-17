@@ -27,41 +27,47 @@ export class ProductItemsService {
     );
   }
 
-  _createBatch(product_id: string, count: number) {
-    return new Array(count).fill(0).map((item, index) => {
-      return this.productItemRepository.create({ product_id, no: index });
-    });
-  }
+  // _createBatch(product_id: string, count: number) {
+  //   return new Array(count).fill(0).map((item, index) => {
+  //     return this.productItemRepository.create({ product_id, no: index });
+  //   });
+  // }
 
-  async findAll() {
+  async findAll(with_relation = false) {
     return await sqlExceptionCatcher(
-      this.productItemRepository.find({ relations: ['product'] }),
+      this.productItemRepository.find({
+        relations: with_relation ? ['product', 'owner'] : [],
+      }),
     );
   }
 
-  async list(page: number, limit: number) {
+  async list(page: number, limit: number, with_relation = false) {
     if (page <= 0 || limit <= 0) {
       throw new requestKeyErrorException(
         'page and limit must be greater than 0',
       );
     }
-    const [result, total] = await sqlExceptionCatcher(
+    const [data, total] = await sqlExceptionCatcher(
       this.productItemRepository.findAndCount({
         order: { update_date: 'DESC' },
-        relations: ['product'],
+        relations: with_relation ? ['product', 'owner'] : [],
         skip: (page - 1) * limit,
         take: limit,
       }),
     );
     return {
-      data: result,
+      data,
       total,
+      page,
+      limit,
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, with_relation = false) {
     const product_item = await sqlExceptionCatcher(
-      this.productItemRepository.findOne(id, { relations: ['product'] }),
+      this.productItemRepository.findOne(id, {
+        relations: with_relation ? ['product', 'owner'] : [],
+      }),
     );
     if (!product_item) {
       throw new NotFoundException(`Product Item with ID ${id} not found`);
@@ -69,14 +75,18 @@ export class ProductItemsService {
     return product_item;
   }
 
-  async findOneByProductIdAndNo(product_id: string, no: number) {
+  async findOneByProductIdAndNo(
+    product_id: string,
+    no: number,
+    with_relation = false,
+  ) {
     const product_item = await this.productItemRepository.findOne(
       {
         product_id: product_id,
         no: no,
       },
       {
-        relations: ['product'],
+        relations: with_relation ? ['product', 'owner'] : [],
       },
     );
     if (!product_item) {

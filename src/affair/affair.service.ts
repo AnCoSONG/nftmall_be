@@ -12,11 +12,16 @@ import { Queue } from 'bull';
 import Redis from 'ioredis';
 import { BsnService } from '../bsn/bsn.service';
 import { CollectorsService } from '../collectors/collectors.service';
+import { Collector } from '../collectors/entities/collector.entity';
+import { PaymentStatus } from '../common/const';
 import { sqlExceptionCatcher } from '../common/utils';
 import { DayjsService } from '../lib/dayjs/dayjs.service';
+import { Order } from '../orders/entities/order.entity';
 import { OrdersService } from '../orders/orders.service';
+import { ProductItem } from '../product-items/entities/product-item.entity';
 import { ProductItemsService } from '../product-items/product-items.service';
 import { CreateProductDto } from '../products/dto/create-product.dto';
+import { Product } from '../products/entities/product.entity';
 import { ProductsService } from '../products/products.service';
 import { PublishersService } from '../publishers/publishers.service';
 
@@ -120,9 +125,15 @@ export class AffairService {
           this.logger.log('Lucky set generated');
         }
         // 完成后清空timeout
-        this.schedulerRegistry.deleteTimeout(
-          `seckill:drawend:${createProductRes.id}`,
-        );
+        try {
+          this.schedulerRegistry.deleteTimeout(
+            `seckill:drawend:${createProductRes.id}`,
+          );
+        } catch (e) {
+          this.logger.error(
+            `seckill:drawend:${createProductRes.id} not found: ${e}`,
+          );
+        }
       }, this.dayjsService.dayjsify(createProductRes.draw_end_timestamp) - this.dayjsService.dayjsify()),
     );
 
@@ -131,13 +142,21 @@ export class AffairService {
     this.schedulerRegistry.addTimeout(
       `seckill:draw:${createProductRes.id}`,
       setTimeout(async () => {
-        await this.redis.sadd(`seckill:drawset:${createProductRes.id}`, 1);
-        await this.redis.sadd(`seckill:drawset:${createProductRes.id}`, 2);
-        await this.redis.sadd(`seckill:drawset:${createProductRes.id}`, 3);
+        await Promise.all([
+          this.participate_draw(1, createProductRes.id),
+          this.participate_draw(2, createProductRes.id),
+          this.participate_draw(3, createProductRes.id),
+        ]);
         this.logger.log('Fake data generated');
-        this.schedulerRegistry.deleteTimeout(
-          `seckill:draw:${createProductRes.id}`,
-        );
+        try {
+          this.schedulerRegistry.deleteTimeout(
+            `seckill:draw:${createProductRes.id}`,
+          );
+        } catch (e) {
+          this.logger.error(
+            `seckill:draw:${createProductRes.id} not found: ${e}`,
+          );
+        }
       }, this.dayjsService.dayjsify(createProductRes.draw_timestamp) - this.dayjsService.dayjsify()),
     );
 
@@ -152,6 +171,10 @@ export class AffairService {
     return await this.redis.get(redis_task_key);
   }
 
+  async get_stock_count(product_id: string) {
+    return await this.redis.get(`seckill:stock:${product_id}`);
+  }
+
   /**
    * 获取参与抽签的人数
    * @returns 当前任务抽签人数，键不存在返回0
@@ -164,17 +187,46 @@ export class AffairService {
    * 参与抽签
    * @param collector_id 用户id
    * @param product_id 藏品id
-   * @returns 1 成功
+   * @returns code 0 成功 code 1 没有钱包 2
    */
   async participate_draw(collector_id: number, product_id: string) {
     // 检查是否存在
-    await this.collectorService.findOne(collector_id);
+    const collector = (await this.collectorService
+      .findOne(collector_id)
+      .catch((err) => {
+        this.logger.error(err);
+        return null;
+      })) as Collector | null;
+    if (!collector) {
+      return {
+        code: 3,
+        message: 'collector not found',
+      };
+    }
+    if (!collector.bsn_address) {
+      return {
+        code: 1,
+        message: 'collector must has bsn account first',
+      };
+    }
     // 参与用户
     const drawRes = await this.redis.sadd(
       `seckill:drawset:${product_id}`,
       collector_id,
     );
-    return drawRes; // 返回结果
+    if (drawRes === 1) {
+      return {
+        code: 0,
+        message: 'participate draw success',
+      };
+    } else if (drawRes === 0) {
+      return {
+        code: 2,
+        message: 'already participated',
+      };
+    } else {
+      throw new InternalServerErrorException('redis sadd failed');
+    }
   }
 
   async get_lucky_set(product_id: string, count: number) {
@@ -193,22 +245,40 @@ export class AffairService {
     return saddRes; // 1
   }
 
+  async destory(product_id: string) {
+    //! this will remove product, product-items that related to product and related order...
+    const removeRes = await this.productsService.remove(product_id);
+    const clearRes = await this.clearSeckillCache(product_id);
+    return {
+      removeRes,
+      clearRes,
+    };
+  }
+
   /**
    * 根据product id清空秒杀缓存
    * 包括 ：
    * seckill:stock:<product_id>
-   * sale_timestamp
+   * seckill:sale_timestamp:<product_id>
    * seckill:drawset:<product_id>
    * seckill:luckyset:<product_id>
    * drawend timeout
    * @param product_id
    */
   async clearSeckillCache(product_id: string) {
-    throw new NotImplementedException(product_id);
+    const deleteRes = await this.redis.del(
+      `seckill:stock:${product_id}`,
+      `seckill:sale_timestamp:${product_id}`,
+      `seckill:drawset:${product_id}`,
+      `seckill:luckyset:${product_id}`,
+      `seckill:buyset:${product_id}`,
+    );
+    return deleteRes >= 4;
   }
 
   /**
    * 秒杀接口
+   * !前置条件: product nft_class_id && collector.bsn_address必须均不为空，秒杀代码尽量不做mysql查询，前端必须调用前必须做验证！
    * @param collector_id 买家id
    * @param product_id 藏品id
    * @returns 抢购结果
@@ -218,7 +288,20 @@ export class AffairService {
     // 资格检查 collector_id in luckyset?
     // 库存检查 decrby/decr 看decr之后数值是否大于等于0，小于0无效
     // 返回减库存之后的值作为用户能购买的no
-    // local hasPerimission = redis.call('sismember', 'seckill:luckyset:${product_id}', collector_id) \nif (hasPermission == 0) then return -2 end \n local stock = redis.call('decr', 'seckill:stock:<product_id>') \n if (stock < 0) then return -1 end \n return stock \n
+
+    const [collector, product] = await Promise.all([
+      this.collectorService.findOne(collector_id) as Promise<Collector>,
+      this.productsService.findOne(product_id) as Promise<Product>,
+    ]);
+    if (!product.nft_class_id) {
+      throw new InternalServerErrorException('product nft_class_id is empty');
+    }
+    if (!collector.bsn_address) {
+      return {
+        code: 5,
+        message: 'collector must have bsn account',
+      };
+    }
     if (
       this.dayjsService.dayjsify() <
       this.dayjsService.dayjsify(
@@ -230,6 +313,8 @@ export class AffairService {
         message: 'not time yet.',
       };
     }
+
+    // lua高并发原子化控制
     const seckillRes = await this.redis.seckill(
       `seckill:luckyset:${product_id}`,
       `seckill:stock:${product_id}`,
@@ -258,11 +343,30 @@ export class AffairService {
         await this.productItemsService.findOneByProductIdAndNo(
           product_id,
           seckillRes,
+          true,
         );
       const order = await this.ordersService.create({
         product_item_id: product_item.id,
         buyer_id: collector_id,
+        sum_price: product_item.product.price,
       });
+
+      // 10分钟后自动标记为canceled
+      this.schedulerRegistry.addTimeout(
+        `seckill:cancel:${order.id}`,
+        setTimeout(async () => {
+          // do something to cancel order
+          await this.payment_cancel(order.id);
+          // remove this timeout
+          try {
+            this.schedulerRegistry.deleteTimeout(`seckill:cancel:${order.id}`);
+          } catch (err) {
+            this.logger.warn(
+              `seckill:cancel:${order.id} timeout not found: ${err}`,
+            );
+          }
+        }, 10 * 60 * 1000),
+      );
       return {
         code: 0,
         message: 'seckill success',
@@ -281,26 +385,128 @@ export class AffairService {
     throw new NotImplementedException(order_id);
   }
 
-  // todo: 支付完成回调
+  // todo: 支付完成回调: 1. 删除timeout 2. 设置订单为已支付，设置支付时间 3. 藏品上链
+  // ?前端限制用户实际timeout时间应该少 10 秒，防止边界情况同时处理支付完成和支付超时
   // 1. 设置订单数据，用户积分更新
   // 2. 队列任务：用户在链上铸造一个nft，ownera为用户自己的地址，铸造完成后绑定nft_id即可完成确权
   // ? (用户花的能量是应用方的能力对吧？)
   // 3. 返回订单数据
   async payment_complete(order_id: string) {
-    throw new NotImplementedException(order_id);
+    //* 查表获取所需数据
+    const order = (await this.ordersService.findOne(order_id, true)) as Order;
+    const product_item = (await this.productItemsService.findOne(
+      order.product_item_id,
+      true,
+    )) as ProductItem;
+    //* 验证数据有效性
+    if (!product_item.product.nft_class_id || !order.buyer.bsn_address) {
+      throw new BadRequestException(
+        'product.nft_class_id & buyer.bsn_address should not be null',
+      );
+    }
+    //* 验证order还未超时
+    if (order.payment_status === PaymentStatus.CANCELED) {
+      throw new BadRequestException('order is canceled');
+    } else if (order.payment_status === PaymentStatus.PAID) {
+      throw new BadRequestException('order is paid');
+    }
+    //* 删除timeout
+    try {
+      this.schedulerRegistry.deleteTimeout(`seckill:cancel:${order_id}`);
+    } catch (err) {
+      this.logger.warn('no timeout found:' + err);
+    }
+    //* 更新数据表 order paid & product_item owner_id
+    const [orderUpdateRes, ownerUpdateRes] = await Promise.all([
+      // 更新订单支付情况
+      this.ordersService.paid(
+        order_id,
+        this.dayjsService.date(),
+      ) as Promise<Order>,
+      // owner更新
+      this.productItemsService.update(product_item.id, {
+        owner_id: order.buyer.id,
+      }) as Promise<ProductItem>,
+      // 积分更新
+      this.collectorService.update(order.buyer.id, {
+        credit: (Number(order.sum_price) * 0.01).toString(),
+      }),
+    ]);
+    //* 藏品上链
+    const createNftRes = await this.bsnService.create_nft({
+      class_id: product_item.product.nft_class_id,
+      name: `${product_item.product.name}#${product_item.no
+        .toString()
+        .padStart(4, '0')}#晋元数藏@${order.buyer.username}(${order.buyer.id})`,
+      uri: product_item.product.src,
+      recipient: order.buyer.bsn_address,
+      data: product_item.id, // 将product_item_id作为data存储，后续查询用户名下藏品的流程是: 查链上用户名下藏品，查到data字段
+    });
+    //* 队列内持续拉取最新事务情况
+    this.affairQueue.add(
+      'update-product-item-nft-id',
+      {
+        product_item_id: product_item.id,
+        operation_id: createNftRes.operation_id,
+      },
+      {
+        attempts: 10,
+        delay: 3000,
+        backoff: {
+          type: 'exponential',
+          delay: 3000,
+        },
+        timeout: 30000,
+      },
+    );
+    return {
+      orderUpdateRes,
+      createNftRes,
+      ownerUpdateRes,
+    };
   }
 
   /**
-   * todo
-   * 超时未支付：归还库存，并设置为已超时
-   * @param collector_id
-   * @param product_id
+   * * 超时未支付/取消支付：1. 归还库存 2. buyset删除用户 3. 取消订单 4. 取消timeout
+   * @param order_id 订单号
    */
-  async payment_timeout(
-    collector_id: number,
-    product_id: string,
-    order_id: string,
-  ) {
-    throw new NotImplementedException(collector_id + product_id + order_id);
+  async payment_cancel(order_id: string) {
+    // 归还库存
+    // buyeset删除该用户
+    // 取消订单
+    // 取消timeout
+    const order = (await this.ordersService
+      .findOne(order_id, true)
+      .catch((err) => {
+        this.logger.error('order not fount: ' + err);
+        return null;
+      })) as Order | null;
+    if (!order) {
+      throw new BadRequestException('order not found');
+    }
+    if (order.payment_status !== PaymentStatus.UNPAID) {
+      throw new BadRequestException('order is paid or canceled');
+    }
+    const timeoutRes = await Promise.all([
+      this.redis.incr(`seckill:stock:${order.product_item.product_id}`),
+      this.redis.srem(
+        `seckill:buyset:${order.product_item.product_id}`,
+        order.buyer_id,
+      ),
+      this.ordersService.cancel(order_id).catch((err) => {
+        this.logger.error(err);
+        return -1;
+      }),
+    ]);
+    try {
+      this.schedulerRegistry.deleteTimeout(`seckill:cancel:${order_id}`);
+    } catch (err) {
+      this.logger.warn('no timeout found:' + err);
+    }
+    return {
+      returnStock: timeoutRes[0],
+      removeBuyerRes: timeoutRes[1],
+      cancelOrderRes: timeoutRes[2],
+    };
   }
 }

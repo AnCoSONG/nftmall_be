@@ -10,11 +10,12 @@ import fastifyCompress from '@fastify/compress';
 import { fastifyCookie } from '@fastify/cookie';
 // import fastifyCookie from 'fastify-cookie';
 import FastifyCsrf from 'fastify-csrf';
+import fastifyCors from '@fastify/cors';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
 
 async function bootstrap() {
-  const fastifyAdapter = new FastifyAdapter({ logger: true });
+  const fastifyAdapter = new FastifyAdapter({ logger: true, trustProxy: true });
   // fastifyAdapter.register(fastifyCompress);
   // fastifyAdapter.register(fastifyCookie, {
   //   secret: 'anco',
@@ -27,7 +28,7 @@ async function bootstrap() {
         origin:
           process.env.NODE_ENV === 'dev'
             ? 'http://localhost:3000'
-            : 'https://jinyuanshuzi.com',
+            : 'http://jinyuanshuzi.com',
         credentials: true,
       },
     },

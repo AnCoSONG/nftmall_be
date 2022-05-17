@@ -100,23 +100,19 @@ export class BsnService {
     }
   }
 
-  async get_accounts(
-    account?: string,
-    offset = 0,
-    limit = 10,
-    sort_by: 'DATE_ASC' | 'DATE_DESC' = 'DATE_DESC',
-    start_date?: string,
-    end_date?: string,
-    operation_id?: string,
-  ): Promise<GetAccountsRes> {
+  async get_accounts(payload: {
+    account?: string;
+    offset?: number;
+    limit?: number;
+    sort_by?: 'DATE_ASC' | 'DATE_DESC';
+    start_date?: string;
+    end_date?: string;
+    operation_id?: string;
+  }): Promise<GetAccountsRes> {
     const query = {
-      offset: Math.max(offset, 0).toString(),
-      limit: Math.min(limit, 50).toString(),
-      account,
-      sort_by,
-      start_date,
-      end_date,
-      operation_id,
+      ...payload,
+      offset: payload.offset && Math.max(payload.offset, 0).toString(),
+      limit: payload.limit && Math.min(payload.limit, 50).toString(),
     };
     return await this.request('/v1beta1/accounts', 'GET', query, {});
   }
@@ -215,25 +211,26 @@ export class BsnService {
     );
   }
 
-  async create_nft(
-    class_id: string,
-    name: string,
-    uri?: string,
-    uri_hash?: string,
-    data?: string,
-    recipient?: string,
-    tag?: Record<string, string>,
-  ): Promise<TxRes> {
+  async create_nft(payload: {
+    class_id: string;
+    name: string;
+    uri?: string;
+    uri_hash?: string;
+    data?: string;
+    recipient?: string;
+    tag?: Record<string, string>;
+  }): Promise<TxRes> {
     const data_ = {
-      name,
-      uri,
-      uri_hash,
-      data,
-      recipient,
-      tag,
+      name: payload.name,
+      uri: payload.uri,
+      uri_hash: payload.uri_hash,
+      data: payload.data,
+      recipient: payload.recipient,
+      tag: payload.tag,
+      operation_id: getIdepmotentValue(),
     };
     return await this.request(
-      `/v1beta1/nft/nfts/${class_id}`,
+      `/v1beta1/nft/nfts/${payload.class_id}`,
       'POST',
       {},
       data_,
