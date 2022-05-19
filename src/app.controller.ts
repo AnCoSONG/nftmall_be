@@ -66,10 +66,16 @@ export class AppController {
     );
   }
 
-  @Get('/test5')
-  test5() {
-    return this.bsnService.get_nft_class({
-      id: 'avata954e1683f77c59581a5d0f69daa616600655713bccbb7c54eb6c6a6ba529fc21',
-    });
+  @Get('/get_nft_class_detail')
+  get_nft_class_detail(@Query('nft_class_id') nft_class_id: string) {
+    return this.bsnService.get_nft_class_detail(nft_class_id);
+  }
+
+  @Get('/get_nft_detail')
+  get_nft(
+    @Query('nft_id') nft_id: string,
+    @Query('nft_class_id') nft_class_id: string,
+  ) {
+    return this.bsnService.get_nft_detail(nft_class_id, nft_id);
   }
 }

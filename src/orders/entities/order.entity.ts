@@ -52,6 +52,9 @@ export class Order {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: '0.00' })
   sum_price: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  out_payment_id: string | null; // 外部订单号，比如微信支付订单号
+
   @Column({
     type: 'enum',
     enum: SupportPayment,

@@ -10,7 +10,6 @@ import fastifyCompress from '@fastify/compress';
 import { fastifyCookie } from '@fastify/cookie';
 // import fastifyCookie from 'fastify-cookie';
 import FastifyCsrf from 'fastify-csrf';
-import fastifyCors from '@fastify/cors';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
 

@@ -1,5 +1,6 @@
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { BsnModule } from '../bsn/bsn.module';
 import { CollectorsModule } from '../collectors/collectors.module';
 import { LibModule } from '../lib/lib.module';
@@ -18,6 +19,7 @@ import { AffairService } from './affair.service';
     PublishersModule,
     OrdersModule,
     ProductItemsModule,
+    ConfigModule,
     CollectorsModule,
     BullModule.registerQueue({ name: 'affair' }),
   ],

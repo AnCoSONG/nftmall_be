@@ -7,6 +7,7 @@ export enum PaymentStatus {
   UNPAID = 'unpaid',
   PAID = 'paid',
   CANCELED = 'canceled',
+  PAYING = 'paying', // todo: remove
 }
 
 export enum SupportType {
@@ -20,6 +21,13 @@ export enum SupportType {
 export enum DisplayMode {
   LIGHT = 'light',
   DARK = 'dark',
+}
+
+export enum onChainStatus {
+  SUCCESS = 'success',
+  PROCESSING = 'processing',
+  FAILED = 'failed',
+  PENDING = 'pending',
 }
 
 export const phoneReg =

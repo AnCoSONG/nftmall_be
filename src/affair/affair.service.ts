@@ -2,6 +2,7 @@ import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { InjectQueue } from '@nestjs/bull';
 import {
   BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -16,6 +17,7 @@ import { Collector } from '../collectors/entities/collector.entity';
 import { PaymentStatus } from '../common/const';
 import { sqlExceptionCatcher } from '../common/utils';
 import { DayjsService } from '../lib/dayjs/dayjs.service';
+import { WXPAY_SYMBOL } from '../lib/wxpay.provider';
 import { Order } from '../orders/entities/order.entity';
 import { OrdersService } from '../orders/orders.service';
 import { ProductItem } from '../product-items/entities/product-item.entity';
@@ -24,6 +26,9 @@ import { CreateProductDto } from '../products/dto/create-product.dto';
 import { Product } from '../products/entities/product.entity';
 import { ProductsService } from '../products/products.service';
 import { PublishersService } from '../publishers/publishers.service';
+import WXPAY from 'wechatpay-node-v3';
+import { WxCallbackDto } from './common.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AffairService {
@@ -39,6 +44,8 @@ export class AffairService {
     private readonly schedulerRegistry: SchedulerRegistry,
     private readonly ordersService: OrdersService,
     @InjectRedis() private readonly redis: Redis,
+    @Inject(WXPAY_SYMBOL) private readonly wxpay: WXPAY,
+    private readonly configService: ConfigService,
   ) {}
 
   async publish(publisher_id: string, createProductDto: CreateProductDto) {
@@ -51,6 +58,7 @@ export class AffairService {
     const createProductRes = await this.productsService.create(
       createProductDto,
     );
+    //* 上链
     const createNftClassRes = await this.bsnService.create_nft_class({
       owner: publisher.bsn_address,
       name: createProductRes.name,
@@ -64,7 +72,7 @@ export class AffairService {
       'create-nft-class-operation-id: ' + createNftClassRes.operation_id,
     );
 
-    //* 上链，生成链上nft class id并异步写入product，为之后product创建product item上链做准备（因为上链发行nft必须要nft class)
+    //* 生成链上nft class id并异步写入product，为之后product创建product item上链做准备（因为上链发行nft必须要nft class)
     this.affairQueue.add(
       'update-nft-class-id',
       {
@@ -166,6 +174,41 @@ export class AffairService {
     };
   }
 
+  /**
+   * !手动刷新 nft
+   * !前提是之前的上链任务失败了
+   * @param product_id
+   * @param operation_id
+   * @param retry
+   * @returns
+   */
+  async manual_update_nft_id(
+    product_id: string,
+    operation_id: string,
+    retry = 10,
+  ) {
+    this.affairQueue.add(
+      'update-nft-class-id',
+      {
+        product_id: product_id,
+        operation_id: operation_id,
+      },
+      {
+        delay: 3000,
+        backoff: {
+          type: 'exponential',
+          delay: 3000,
+        },
+        attempts: retry,
+        timeout: 30000,
+        // removeOnComplete: true,
+      },
+    );
+    return {
+      message: 'update-nft-class-id-affair-queued',
+    };
+  }
+
   // queue:status:<job_name>:<product_id>
   async get_status(redis_task_key: string) {
     return await this.redis.get(redis_task_key);
@@ -246,6 +289,7 @@ export class AffairService {
   }
 
   async destory(product_id: string) {
+    // todo: delete nft
     //! this will remove product, product-items that related to product and related order...
     const removeRes = await this.productsService.remove(product_id);
     const clearRes = await this.clearSeckillCache(product_id);
@@ -305,7 +349,7 @@ export class AffairService {
     if (
       this.dayjsService.dayjsify() <
       this.dayjsService.dayjsify(
-        this.redis.get(`seckill:sale_timestamp:${product_id}`),
+        await this.redis.get(`seckill:sale_timestamp:${product_id}`),
       )
     ) {
       return {
@@ -355,16 +399,8 @@ export class AffairService {
       this.schedulerRegistry.addTimeout(
         `seckill:cancel:${order.id}`,
         setTimeout(async () => {
-          // do something to cancel order
+          // do something to cancel order & remove related timeout
           await this.payment_cancel(order.id);
-          // remove this timeout
-          try {
-            this.schedulerRegistry.deleteTimeout(`seckill:cancel:${order.id}`);
-          } catch (err) {
-            this.logger.warn(
-              `seckill:cancel:${order.id} timeout not found: ${err}`,
-            );
-          }
         }, 10 * 60 * 1000),
       );
       return {
@@ -379,19 +415,84 @@ export class AffairService {
     }
   }
 
-  // todo: 支付接口调用
-  async pay(order_id: string) {
-    //
-    throw new NotImplementedException(order_id);
+  // todo: 支付接口测试
+  async pay(order_id: string, ip: string) {
+    // todo: 改进参数，根据前端实际情况传递需要的参数
+    const order = (await this.ordersService.findOne(order_id, true)) as Order;
+    if (order.payment_status === PaymentStatus.PAID) {
+      throw new BadRequestException('order is already paid');
+    } else if (order.payment_status === PaymentStatus.CANCELED) {
+      throw new BadRequestException('order is canceled');
+    }
+    const payRes = await this.wxpay.transactions_h5({
+      description: '测试',
+      out_trade_no: order.trade_no,
+      notify_url: 'http://localhost:5001/v1/affair/paymentCallback',
+      attach: order.id,
+      amount: {
+        total: parseFloat(order.sum_price) * 100,
+        currency: 'CNY',
+      },
+      scene_info: {
+        payer_client_ip: ip,
+        h5_info: {
+          type: 'Wap',
+          app_name: '晋元数藏商城',
+          app_url: 'jinyuanshucang.com',
+        },
+      },
+    });
+    if (payRes.status !== 200) {
+      return {
+        payRes: payRes,
+      };
+    } else {
+      throw new InternalServerErrorException(payRes.message);
+    }
   }
 
-  // todo: 支付完成回调: 1. 删除timeout 2. 设置订单为已支付，设置支付时间 3. 藏品上链
+  // todo 根据实际情况调整回调处理方案
+  //* payment_complete / payment_cancel
+  async payment_callback(body: WxCallbackDto) {
+    console.log(body);
+    try {
+      const result = this.wxpay.decipher_gcm(
+        body.resource.ciphertext,
+        body.resource.associated_data,
+        body.resource.nonce,
+        this.configService.get('wxpay.apiv3'),
+      ) as Record<string, any>;
+      const payment_status = await this.ordersService.get_order_payment_status(
+        result.attach,
+      );
+      if (payment_status !== PaymentStatus.PAID) {
+        return { code: 1, message: 'order is already paid', error: '' };
+      }
+      if (result.trade_state === 'SUCCESS') {
+        return { code: 0, message: 'success', error: '' };
+      } else if (result.trade_state === 'NOTPAY') {
+        //* 未支付时应当设置为unpaid
+        await this.ordersService.update(result.attach, {
+          payment_status: PaymentStatus.UNPAID,
+        });
+        return { code: 2, message: 'not pay', error: '' };
+      }
+      // console.log(result);
+      return { code: 0, result: result, error: '' }; // 给controller进一步解析
+    } catch (err) {
+      console.log(err.code);
+      return { code: 100, error: `${err.code}: ${err.message}`, result: '' };
+    }
+  }
+
+  // todo: 根据实际情况调整，去掉一些不需要加载的内容
+  // !支付成功: 1. 删除timeout 2. 设置订单为已支付，设置支付时间 3. 藏品上链
   // ?前端限制用户实际timeout时间应该少 10 秒，防止边界情况同时处理支付完成和支付超时
   // 1. 设置订单数据，用户积分更新
   // 2. 队列任务：用户在链上铸造一个nft，ownera为用户自己的地址，铸造完成后绑定nft_id即可完成确权
   // ? (用户花的能量是应用方的能力对吧？)
   // 3. 返回订单数据
-  async payment_complete(order_id: string) {
+  async payment_complete(order_id: string, out_trade_id: string) {
     //* 查表获取所需数据
     const order = (await this.ordersService.findOne(order_id, true)) as Order;
     const product_item = (await this.productItemsService.findOne(
@@ -422,6 +523,7 @@ export class AffairService {
       this.ordersService.paid(
         order_id,
         this.dayjsService.date(),
+        out_trade_id,
       ) as Promise<Order>,
       // owner更新
       this.productItemsService.update(product_item.id, {
@@ -447,6 +549,7 @@ export class AffairService {
       'update-product-item-nft-id',
       {
         product_item_id: product_item.id,
+        nft_class_id: product_item.product.nft_class_id,
         operation_id: createNftRes.operation_id,
       },
       {
@@ -467,6 +570,7 @@ export class AffairService {
   }
 
   /**
+   * todo: 根据实际情况调整
    * * 超时未支付/取消支付：1. 归还库存 2. buyset删除用户 3. 取消订单 4. 取消timeout
    * @param order_id 订单号
    */
@@ -508,5 +612,10 @@ export class AffairService {
       removeBuyerRes: timeoutRes[1],
       cancelOrderRes: timeoutRes[2],
     };
+  }
+
+  async fetch_payment_result(trade_no: string) {
+    const res = await this.wxpay.query({ out_trade_no: trade_no });
+    // todo: 根据订单返回结果设置order状态
   }
 }

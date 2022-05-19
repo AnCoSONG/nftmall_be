@@ -1,5 +1,5 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { PaymentStatus } from '../../common/const';
+import { PaymentStatus, SupportPayment } from '../../common/const';
 import { CreateOrderDto } from './create-order.dto';
 
 export class UpdateOrderDto extends PartialType(CreateOrderDto) {
@@ -11,4 +11,10 @@ export class UpdateOrderDto extends PartialType(CreateOrderDto) {
 
   @ApiProperty({ enum: PaymentStatus, example: PaymentStatus.PAID })
   payment_status?: PaymentStatus;
+
+  @ApiProperty({ enum: SupportPayment, example: SupportPayment.WX })
+  pay_method?: SupportPayment;
+
+  @ApiProperty({ example: null })
+  out_trade_id?: string;
 }

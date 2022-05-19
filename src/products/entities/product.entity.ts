@@ -12,7 +12,7 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
-import { SupportType, Tag } from '../../common/const';
+import { onChainStatus, SupportType, Tag } from '../../common/const';
 import { Genre } from '../../genres/entities/genre.entity';
 import { ProductItem } from '../../product-items/entities/product-item.entity';
 import { Publisher } from '../../publishers/entities/publisher.entity';
@@ -83,6 +83,16 @@ export class Product {
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   nft_class_id: string | null; // 由于bsn create nft class返回的是一个不缺的事务，因此需要加入队列动态去判断是否完成了处理，完成后才能上链
+
+  @Column({
+    type: 'enum',
+    enum: onChainStatus,
+    default: onChainStatus.PENDING,
+  })
+  on_chain_status: onChainStatus;
+
+  @Column({ type: 'varchar', nullable: true })
+  operation_id: string | null;
 
   @Column({ nullable: true })
   publisher_id: string;

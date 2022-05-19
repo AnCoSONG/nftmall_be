@@ -70,10 +70,11 @@ export class OrdersService {
     });
   }
 
-  async paid(id: string, pay_timestamp: Date) {
+  async paid(id: string, pay_timestamp: Date, out_trade_id: string) {
     return await this.update(id, {
       payment_status: PaymentStatus.PAID,
       pay_timestamp: pay_timestamp,
+      out_trade_id,
     });
   }
 
@@ -81,6 +82,11 @@ export class OrdersService {
     const order = await this.findOne(id);
     const merged = this.orderRepository.merge(order, updateOrderDto);
     return await sqlExceptionCatcher(this.orderRepository.save(merged));
+  }
+
+  async get_order_payment_status(order_id: string) {
+    const order = await this.findOne(order_id);
+    return order.payment_status;
   }
 
   async remove(id: string) {

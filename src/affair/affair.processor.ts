@@ -1,5 +1,6 @@
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import {
+  OnQueueActive,
   OnQueueCompleted,
   OnQueueFailed,
   OnQueueProgress,
@@ -22,33 +23,45 @@ export class AffairProcessor {
     private readonly productItemsService: ProductItemsService,
     @InjectRedis() private readonly redis: Redis,
   ) {}
+
   @Process('update-nft-class-id')
   async createNftClass(job: Job) {
     // 检测区块链事务是否已完成
-    // console.log(job.data);
     const tx_res = await this.bsnService.get_transactions(
       job.data.operation_id,
     );
     // console.log(tx_res);
     if (tx_res.code) {
       this.logger.warn('get tx error, ' + tx_res.code);
+      await this.productsService.onChainFail(job.data.product_id);
       throw new BadRequestException('Get Tx Error');
     }
     if (tx_res.status !== 1) {
       this.logger.warn('create nft class incomplete, ' + tx_res.status);
+      await this.productsService.onChainFail(job.data.product_id);
       throw new BadRequestException('Create nft class has not finished.');
     }
     // finished
     if (tx_res.class_id && tx_res.class_id !== '') {
       this.logger.log('create nft class complete');
-      const updateRes = await this.productsService.update(job.data.product_id, {
-        nft_class_id: tx_res.class_id,
-      });
+      const updateRes = await this.productsService.onChainSuccess(
+        job.data.product_id,
+        tx_res.class_id,
+      );
       this.logger.log(`update nft class id of ${job.data.product_id} complete`);
       return updateRes;
     } else {
       throw new BadRequestException('Class id is null or empty');
     }
+  }
+
+  @OnQueueActive({ name: 'update-nft-class-id' })
+  onUpdateNftClassActive(job: Job) {
+    this.logger.log(`${job.id} - ${job.name} - active!`);
+    this.productsService.onChainProcessing(
+      job.data.product_id,
+      job.data.operation_id,
+    );
   }
 
   @Process('create-product-items')
@@ -63,7 +76,7 @@ export class AffairProcessor {
         no: i,
       });
       this.logger.log(
-        `${createRes.product_id} ${createRes.no} ${createRes.id}`,
+        `create-product-items: ${createRes.product_id} ${createRes.no} ${createRes.id}`,
       );
       job.progress((i / job.data.count) * 100);
     }
@@ -105,22 +118,39 @@ export class AffairProcessor {
     );
     if (tx_res.code) {
       this.logger.warn('get tx error, ' + tx_res.code);
+      this.productItemsService.onChainFail(job.data.product_item_id);
       throw new BadRequestException('Get Tx Error');
     }
     if (tx_res.status !== 1) {
       this.logger.warn('update nft id incomplete, ' + tx_res.status);
+      this.productItemsService.onChainFail(job.data.product_item_id);
       throw new BadRequestException('Update nft id has not finished.');
     }
     // 更新
-    const updateRes = await this.productItemsService.update(
+    if (tx_res.nft_id && tx_res.nft_id !== '') {
+      const updateRes = await this.productItemsService.onChainSuccess(
+        job.data.product_item_id,
+        tx_res.nft_id,
+        job.data.nft_class_id,
+        job.data.operation_id,
+      );
+      this.logger.log(
+        `update nft id of ${job.data.product_item_id} with ${tx_res.nft_id} complete`,
+      );
+      return updateRes;
+    } else {
+      this.logger.error('nft id is null or empty');
+      this.productItemsService.onChainFail(job.data.product_item_id);
+      throw new BadRequestException('Nft id is null or empty');
+    }
+  }
+
+  @OnQueueActive({ name: 'update-product-item-nft-id' })
+  onUpdateProductItemNftIdActive(job: Job) {
+    this.logger.log(`${job.id} - ${job.name} - active!`);
+    this.productItemsService.onChainProcessing(
       job.data.product_item_id,
-      {
-        nft_id: tx_res.nft_id,
-      },
+      job.data.operation_id,
     );
-    this.logger.log(
-      `update nft id of ${job.data.product_item_id} with ${tx_res.nft_id} complete`,
-    );
-    return updateRes;
   }
 }

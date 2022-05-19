@@ -2,17 +2,20 @@ import {
   Body,
   Controller,
   Get,
-  NotImplementedException,
   Param,
   Post,
   Query,
+  Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ThrottlerBehindProxyGuard } from '../guards/throttler-behind-proxy.guard';
 import { CreateProductDto } from '../products/dto/create-product.dto';
 import { AffairService } from './affair.service';
+import { DrawDto, PayDto, SeckillDto, WxCallbackDto } from './common.dto';
 
 @ApiTags('事务')
 @Controller('affair')
@@ -20,9 +23,9 @@ export class AffairController {
   constructor(private readonly affairService: AffairService) {}
 
   // 发布藏品, <谁>发布一个<什么>产品
-  @Post('/:id/publish')
+  @Post('/:publisher_id/publish')
   publish(
-    @Param('id') publisher_id: string,
+    @Param('publisher_id') publisher_id: string,
     @Body() createProductDto: CreateProductDto,
   ) {
     return this.affairService.publish(publisher_id, createProductDto);
@@ -40,20 +43,18 @@ export class AffairController {
     return this.affairService.clearSeckillCache(product_id);
   }
 
-  //todo:DTO
   @Post('/seckill')
-  seckill(@Body() seckillDto: { product_id: string; collector_id: number }) {
+  seckill(@Body() seckillDto: SeckillDto) {
     return this.affairService.seckill(
       seckillDto.collector_id,
       seckillDto.product_id,
     );
   }
 
-  //todo:DTO
   @Post('/draw')
   @Throttle(500, 60)
   @UseGuards(ThrottlerBehindProxyGuard)
-  draw(@Body() drawDto: { product_id: string; collector_id: number }) {
+  draw(@Body() drawDto: DrawDto) {
     return this.affairService.participate_draw(
       drawDto.collector_id,
       drawDto.product_id,
@@ -61,17 +62,37 @@ export class AffairController {
   }
 
   @Post('/pay')
-  pay() {
-    throw new NotImplementedException();
+  pay(@Req() req: FastifyRequest, @Body() payDto: PayDto) {
+    return this.affairService.pay(payDto.order_id, req.ip);
   }
 
-  @Post('/simpay')
-  simpay(@Query('order_id') order_id: string) {
-    return this.affairService.payment_complete(order_id);
+  @Post('/paymentCallback')
+  async payment_callback(
+    @Res({ passthrough: false }) res: FastifyReply,
+    @Body() body: WxCallbackDto,
+  ) {
+    // 可能会多次收到，如果已完成则直接返回200
+    const ciphereRes = await this.affairService.payment_callback(body);
+    if (ciphereRes.code === 0) {
+      res.status(200).send();
+    } else {
+      res.status(500).send({
+        code: 'FAIL',
+        message: ciphereRes.error,
+      });
+    }
   }
 
-  @Post('/cancel')
-  cancel_payment(@Query('order_id') order_id: string) {
+  @Post('/sim_paymentComplete')
+  payment_complete(
+    @Query('order_id') order_id: string,
+    @Query('out_trade_id') out_trade_id: string,
+  ) {
+    return this.affairService.payment_complete(order_id, out_trade_id);
+  }
+
+  @Post('/sim_paymentCancel')
+  payment_cancel(@Query('order_id') order_id: string) {
     return this.affairService.payment_cancel(order_id);
   }
 

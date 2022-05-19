@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BsnService } from '../bsn/bsn.service';
+import { onChainStatus } from '../common/const';
 import { sqlExceptionCatcher } from '../common/utils';
 import { requestKeyErrorException } from '../exceptions';
 import { Genre } from '../genres/entities/genre.entity';
@@ -105,6 +106,26 @@ export class ProductsService {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
     return product;
+  }
+
+  async onChainFail(id: string) {
+    return await this.update(id, {
+      on_chain_status: onChainStatus.FAILED,
+    });
+  }
+
+  async onChainProcessing(id: string, operation_id: string) {
+    return await this.update(id, {
+      on_chain_status: onChainStatus.PROCESSING,
+      operation_id: operation_id,
+    });
+  }
+
+  async onChainSuccess(id: string, nft_class_id: string) {
+    return await this.update(id, {
+      nft_class_id,
+      on_chain_status: onChainStatus.SUCCESS,
+    });
   }
 
   async update(id: string, updateProductDto: UpdateProductDto) {

@@ -11,6 +11,7 @@ import {
   VersionColumn,
 } from 'typeorm';
 import { Collector } from '../../collectors/entities/collector.entity';
+import { onChainStatus } from '../../common/const';
 
 @Entity()
 export class ProductItem {
@@ -45,6 +46,15 @@ export class ProductItem {
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   nft_id: string | null; // 链上ID 上链后才有 前端先 根据订单支付时间来判断是否已支付，根据nft_id来判断是否已上链
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  nft_class_id: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  operation_id: string | null;
+
+  @Column({ type: 'enum', enum: onChainStatus, default: onChainStatus.PENDING })
+  on_chain_status: onChainStatus;
 
   @VersionColumn({ type: 'smallint', unsigned: true })
   version: number;

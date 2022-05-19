@@ -33,5 +33,10 @@ export default () => {
       api_code: process.env.IDCHECK_API_CODE,
       api_url: process.env.IDCHECK_API_URL,
     },
+    wxpay: {
+      appid: process.env.WXPAY_APPID,
+      mchid: process.env.WXPAY_MCHID,
+      apiv3: process.env.WXPAY_APIV3,
+    },
   };
 };

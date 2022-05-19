@@ -43,7 +43,7 @@ export class TransformInterceptor implements NestInterceptor {
           data,
           code: res.statusCode,
           statusCode: res.statusCode,
-          message: data.message ?? `request ${req.url} success`,
+          message: (data && data.message) ?? `request ${req.url} success`,
         };
       }),
     );

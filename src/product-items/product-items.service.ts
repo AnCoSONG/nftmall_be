@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { onChainStatus } from '../common/const';
 import { sqlExceptionCatcher } from '../common/utils';
 import { requestKeyErrorException } from '../exceptions';
 import { ProductsService } from '../products/products.service';
@@ -95,6 +96,33 @@ export class ProductItemsService {
       );
     }
     return product_item;
+  }
+
+  async onChainProcessing(id: string, operation_id: string) {
+    return await this.update(id, {
+      on_chain_status: onChainStatus.PROCESSING,
+      operation_id,
+    });
+  }
+
+  async onChainFail(id: string) {
+    return await this.update(id, {
+      on_chain_status: onChainStatus.FAILED,
+    });
+  }
+
+  async onChainSuccess(
+    id: string,
+    nft_id: string,
+    nft_class_id: string,
+    operation_id: string,
+  ) {
+    return await this.update(id, {
+      nft_id,
+      nft_class_id,
+      operation_id,
+      on_chain_status: onChainStatus.SUCCESS,
+    });
   }
 
   async update(id: string, updateProductItemDto: UpdateProductItemDto) {
