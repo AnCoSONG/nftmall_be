@@ -122,6 +122,7 @@ export class ProductItemsService {
       nft_class_id,
       operation_id,
       on_chain_status: onChainStatus.SUCCESS,
+      on_chain_timestamp: new Date()
     });
   }
 

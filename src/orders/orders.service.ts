@@ -1,11 +1,12 @@
 import {
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PaymentStatus } from '../common/const';
+import { onChainStatus, PaymentStatus } from '../common/const';
 import { getIdepmotentValue, sqlExceptionCatcher } from '../common/utils';
 import { requestKeyErrorException } from '../exceptions';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -14,6 +15,7 @@ import { Order } from './entities/order.entity';
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
   constructor(
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
@@ -45,26 +47,83 @@ export class OrdersService {
     return order;
   }
 
-  async list(page: number, limit: number, with_releation = false) {
+  async list(
+    page: number,
+    limit: number,
+    with_releation = false,
+    query: 'all' & onChainStatus & PaymentStatus,
+  ) {
     if (page <= 0 || limit <= 0) {
       throw new requestKeyErrorException(
         'page and limit must be greater than 0',
       );
     }
-    const [data, total] = await sqlExceptionCatcher(
-      this.orderRepository.findAndCount({
-        order: { update_date: 'DESC' },
-        relations: with_releation ? ['product_item', 'buyer'] : [],
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-    );
-    return {
-      data,
-      total,
-      page,
-      limit,
-    };
+    if (query === 'all') {
+      const [data, total] = await sqlExceptionCatcher(
+        this.orderRepository.findAndCount({
+          order: { update_date: 'DESC' },
+          relations: with_releation
+            ? ['product_item', 'buyer', 'product_item.product']
+            : [],
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+      );
+      return {
+        data,
+        total,
+        page,
+        limit,
+      };
+    } else if (
+      query === 'all' ||
+      query === 'unpaid' ||
+      query === 'canceled' ||
+      query === 'paid'
+    ) {
+      const [data, total] = await sqlExceptionCatcher(
+        this.orderRepository.findAndCount({
+          order: { update_date: 'DESC' },
+          relations: with_releation
+            ? ['product_item', 'buyer', 'product_item.product']
+            : [],
+          where: {
+            payment_status: query,
+          },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+      );
+      return {
+        data,
+        total,
+        page,
+        limit,
+      };
+    } else {
+      const [data, total] = await sqlExceptionCatcher(
+        this.orderRepository.findAndCount({
+          order: { update_date: 'DESC' },
+          relations: with_releation
+            ? ['product_item', 'buyer', 'product_item.product']
+            : ['product_item', 'product_item.product'],
+          where: {
+            payment_status: 'paid',
+            product_item: {
+              on_chain_status: query,
+            },
+          },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+      );
+      return {
+        data,
+        total,
+        page,
+        limit,
+      };
+    }
   }
 
   async cancel(id: string) {
@@ -87,31 +146,38 @@ export class OrdersService {
    * 查看订单内product_id对应的order是否已支付
    * @param product_id
    * @param buyer_id
-   * @returns
+   * @returns false not paid or not found true paid
    */
   async is_paid(product_id: string, buyer_id: string) {
-    const res = await this.orderRepository
-      .createQueryBuilder('order')
-      .where('buyer_id = :buyer_id', { buyer_id })
-      .leftJoinAndSelect('order.product_item', 'product_item')
-      .where('product_item.product_id = :product_id', { product_id })
-      .andWhere('order.payment_status = :payment_status', {
-        payment_status: PaymentStatus.PAID,
-      })
-      .getCount();
+    const res = await sqlExceptionCatcher(
+      this.orderRepository
+        .createQueryBuilder('order')
+        .where('buyer_id = :buyer_id', { buyer_id })
+        .leftJoinAndSelect('order.product_item', 'product_item')
+        .where('product_item.product_id = :product_id', { product_id })
+        .andWhere('order.payment_status = :payment_status', {
+          payment_status: PaymentStatus.PAID,
+        })
+        .getCount(),
+    );
+    if (!res) {
+      return false;
+    }
     return res === 1;
   }
 
   async is_unpaid(product_id: string, buyer_id: string) {
-    const res = await this.orderRepository
-      .createQueryBuilder('order')
-      .where('buyer_id = :buyer_id', { buyer_id })
-      .leftJoinAndSelect('order.product_item', 'product_item')
-      .where('product_item.product_id = :product_id', { product_id })
-      .andWhere('order.payment_status = :payment_status', {
-        payment_status: PaymentStatus.UNPAID,
-      })
-      .getMany();
+    const res = await sqlExceptionCatcher(
+      this.orderRepository
+        .createQueryBuilder('order')
+        .where('buyer_id = :buyer_id', { buyer_id })
+        .leftJoinAndSelect('order.product_item', 'product_item')
+        .where('product_item.product_id = :product_id', { product_id })
+        .andWhere('order.payment_status = :payment_status', {
+          payment_status: PaymentStatus.UNPAID,
+        })
+        .getMany(),
+    );
     if (res.length === 1) {
       return res[0].id;
     } else if (res.length === 0) {

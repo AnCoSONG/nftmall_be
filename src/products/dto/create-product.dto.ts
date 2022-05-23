@@ -5,28 +5,28 @@ import { Genre } from '../../genres/entities/genre.entity';
 export class CreateProductDto {
   @ApiProperty({
     description: '商品名称',
-    example: '中国第一颗卫星数字珍藏',
+    example: '测试<藏品>',
     required: true,
   })
   name: string;
 
   @ApiProperty({
     description: '商品详情',
-    example: '1970年4月24日，东方红一号卫星在酒泉发射成功，世界为之震动。',
+    example: '测试描述，暂时还用不到',
     required: true,
   })
   description: string;
 
   @ApiProperty({
     description: '商品预览图',
-    example: 'https://picsum.photos/400/300',
+    example: 'https://picsum.photos/400/300?random=3',
     required: true,
   })
   preview_img: string;
 
   @ApiProperty({
     description: '商品资源',
-    example: 'https://picsum.photos/500/500',
+    example: 'https://picsum.photos/500/500?random=100',
     required: true,
   })
   src: string;
@@ -115,7 +115,7 @@ export class CreateProductDto {
 
   @ApiProperty({
     description: '商品类别',
-    example: [{ name: '传统文化' }, { name: '国风' }],
+    example: [{ name: '传统文化' }, { name: '复古' }, { name: '国潮' }],
     required: false,
   })
   genres: Genre[];

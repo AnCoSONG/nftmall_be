@@ -17,4 +17,7 @@ export class UpdateProductItemDto extends PartialType(CreateProductItemDto) {
 
   @ApiProperty({ example: onChainStatus.PENDING })
   on_chain_status?: onChainStatus;
+
+  @ApiProperty({example: new Date()})
+  on_chain_timestamp?: Date;
 }

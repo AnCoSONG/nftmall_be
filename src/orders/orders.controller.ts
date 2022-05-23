@@ -14,6 +14,7 @@ import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { ApiTags } from '@nestjs/swagger';
+import { onChainStatus, PaymentStatus } from '../common/const';
 
 @ApiTags('订单')
 @Controller('orders')
@@ -36,8 +37,9 @@ export class OrdersController {
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
     @Query('with_relation', ParseBoolPipe) with_relation: boolean,
+    @Query('query') query: 'all' & PaymentStatus & onChainStatus
   ) {
-    return this.ordersService.list(page, limit, with_relation);
+    return this.ordersService.list(page, limit, with_relation, query);
   }
 
   @Get('/is_paid')
@@ -57,8 +59,11 @@ export class OrdersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ordersService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @Query('with_relation', ParseBoolPipe) with_relation: boolean,
+  ) {
+    return this.ordersService.findOne(id, with_relation);
   }
 
   @Patch(':id')

@@ -56,6 +56,9 @@ export class ProductItem {
   @Column({ type: 'enum', enum: onChainStatus, default: onChainStatus.PENDING })
   on_chain_status: onChainStatus;
 
+  @Column({ type: 'timestamp', width: 6, nullable: true })
+  on_chain_timestamp: Date | null;
+
   @VersionColumn({ type: 'smallint', unsigned: true })
   version: number;
 
