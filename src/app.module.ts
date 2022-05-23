@@ -78,9 +78,10 @@ declare module 'ioredis' {
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        // readyLog: true,
+        readyLog: true,
         errorLog: true,
         config: {
+          retryStrategy: () => 2000,
           host: configService.get('redis.host'),
           port: +configService.get<number>('redis.port'),
           password: configService.get('redis.password'),
