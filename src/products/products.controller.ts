@@ -37,9 +37,14 @@ export class ProductsController {
   list(
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
-    @Query('with_relation', ParseBoolPipe) with_relation: boolean,
+    @Query('with_relation', ParseBoolPipe) with_relation?: boolean,
   ) {
     return this.productsService.list(page, limit, with_relation);
+  }
+
+  @Get('/get_stock_count')
+  get_stock_count(@Param('id', ParseUUIDPipe) id: string) {
+    return this.productsService.get_stock_count(id);
   }
 
   // // 上链
@@ -49,8 +54,11 @@ export class ProductsController {
   // }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.productsService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('with_relation', ParseBoolPipe) with_relation?: boolean,
+  ) {
+    return this.productsService.findOne(id, with_relation);
   }
 
   @Patch(':id')

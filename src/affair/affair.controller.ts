@@ -96,8 +96,8 @@ export class AffairController {
     return this.affairService.payment_cancel(order_id);
   }
 
-  @Get('/stock/:id')
-  stock(@Param('id') id: string) {
-    return this.affairService.get_stock_count(id);
+  @Get('/stock/:product_id')
+  stock(@Param('product_id') product_id: string, @Query('db') db: string) {
+    return this.affairService.get_stock_count(product_id, db);
   }
 }

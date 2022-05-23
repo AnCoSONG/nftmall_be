@@ -147,26 +147,26 @@ export class AffairService {
 
     //* 生成假数据
     //! 后期去掉！
-    this.schedulerRegistry.addTimeout(
-      `seckill:draw:${createProductRes.id}`,
-      setTimeout(async () => {
-        await Promise.all([
-          this.participate_draw(1, createProductRes.id),
-          this.participate_draw(2, createProductRes.id),
-          this.participate_draw(3, createProductRes.id),
-        ]);
-        this.logger.log('Fake data generated');
-        try {
-          this.schedulerRegistry.deleteTimeout(
-            `seckill:draw:${createProductRes.id}`,
-          );
-        } catch (e) {
-          this.logger.error(
-            `seckill:draw:${createProductRes.id} not found: ${e}`,
-          );
-        }
-      }, this.dayjsService.dayjsify(createProductRes.draw_timestamp) - this.dayjsService.dayjsify()),
-    );
+    // this.schedulerRegistry.addTimeout(
+    //   `seckill:draw:${createProductRes.id}`,
+    //   setTimeout(async () => {
+    //     await Promise.all([
+    //       this.participate_draw(1, createProductRes.id),
+    //       this.participate_draw(2, createProductRes.id),
+    //       this.participate_draw(3, createProductRes.id),
+    //     ]);
+    //     this.logger.log('Fake data generated');
+    //     try {
+    //       this.schedulerRegistry.deleteTimeout(
+    //         `seckill:draw:${createProductRes.id}`,
+    //       );
+    //     } catch (e) {
+    //       this.logger.error(
+    //         `seckill:draw:${createProductRes.id} not found: ${e}`,
+    //       );
+    //     }
+    //   }, this.dayjsService.dayjsify(createProductRes.draw_timestamp) - this.dayjsService.dayjsify()),
+    // );
 
     return {
       operation_id: createNftClassRes.operation_id,
@@ -214,8 +214,16 @@ export class AffairService {
     return await this.redis.get(redis_task_key);
   }
 
-  async get_stock_count(product_id: string) {
-    return await this.redis.get(`seckill:stock:${product_id}`);
+  async get_stock_count(product_id: string, db: string) {
+    if (db === 'redis') {
+      return {
+        stock_count: parseInt(
+          await this.redis.get(`seckill:stock:${product_id}`),
+        ),
+      };
+    } else {
+      return await this.productsService.get_stock_count(product_id);
+    }
   }
 
   /**
@@ -233,6 +241,7 @@ export class AffairService {
    * @returns code 0 成功 code 1 没有钱包 2
    */
   async participate_draw(collector_id: number, product_id: string) {
+    // todo: 参与抽签时间
     // 检查是否存在
     const collector = (await this.collectorService
       .findOne(collector_id)

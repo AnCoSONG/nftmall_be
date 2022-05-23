@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaymentStatus } from '../common/const';
@@ -76,6 +80,47 @@ export class OrdersService {
       pay_timestamp: pay_timestamp,
       out_trade_id,
     });
+  }
+
+  /**
+   * 某用户是否已购买某产品
+   * 查看订单内product_id对应的order是否已支付
+   * @param product_id
+   * @param buyer_id
+   * @returns
+   */
+  async is_paid(product_id: string, buyer_id: string) {
+    const res = await this.orderRepository
+      .createQueryBuilder('order')
+      .where('buyer_id = :buyer_id', { buyer_id })
+      .leftJoinAndSelect('order.product_item', 'product_item')
+      .where('product_item.product_id = :product_id', { product_id })
+      .andWhere('order.payment_status = :payment_status', {
+        payment_status: PaymentStatus.PAID,
+      })
+      .getCount();
+    return res === 1;
+  }
+
+  async is_unpaid(product_id: string, buyer_id: string) {
+    const res = await this.orderRepository
+      .createQueryBuilder('order')
+      .where('buyer_id = :buyer_id', { buyer_id })
+      .leftJoinAndSelect('order.product_item', 'product_item')
+      .where('product_item.product_id = :product_id', { product_id })
+      .andWhere('order.payment_status = :payment_status', {
+        payment_status: PaymentStatus.UNPAID,
+      })
+      .getMany();
+    if (res.length === 1) {
+      return res[0].id;
+    } else if (res.length === 0) {
+      return null;
+    } else {
+      throw new InternalServerErrorException(
+        'db error, unpaid order duplicated',
+      );
+    }
   }
 
   async update(id: string, updateOrderDto: UpdateOrderDto) {

@@ -27,25 +27,25 @@ export class ProductItemsController {
   // }
 
   @Get()
-  findAll(@Query('with_relation') withRelation: boolean) {
-    return this.productItemsService.findAll(withRelation);
+  findAll(@Query('with_relation') with_relation: boolean) {
+    return this.productItemsService.findAll(with_relation);
   }
 
   @Get('/list')
   list(
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
-    @Query('with_relation') withRelation: boolean,
+    @Query('with_relation') with_relation: boolean,
   ) {
-    return this.productItemsService.list(page, limit, withRelation);
+    return this.productItemsService.list(page, limit, with_relation);
   }
 
   @Get(':id')
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
-    @Query('with_relation') withRelation: boolean,
+    @Query('with_relation') with_relation: boolean,
   ) {
-    return this.productItemsService.findOne(id, withRelation);
+    return this.productItemsService.findOne(id, with_relation);
   }
 
   @Patch(':id')

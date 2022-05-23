@@ -32,16 +32,24 @@ export class ProductsService {
       throw new requestKeyErrorException('publisher_id is required');
     }
     //* 验证timestamp是否合理
+    const draw_end_dayjs = this.dayjsService.dayjsify(
+      createProductDto.draw_end_timestamp,
+    );
+    const draw_dayjs = this.dayjsService.dayjsify(
+      createProductDto.draw_timestamp,
+    );
+    const sale_dayjs = this.dayjsService.dayjsify(
+      createProductDto.sale_timestamp,
+    );
+    const now_dayjs = this.dayjsService.dayjsify();
     if (
       !(
         // 验证timestamp是否按照正确大小顺序
+        // now < draw < draw_end < sale
         (
-          createProductDto.draw_end_timestamp >
-            createProductDto.draw_timestamp &&
-          createProductDto.draw_end_timestamp <
-            createProductDto.sale_timestamp &&
-          this.dayjsService.dayjsify(createProductDto.draw_timestamp) >
-            this.dayjsService.dayjsify()
+          draw_end_dayjs > draw_dayjs &&
+          draw_end_dayjs < sale_dayjs &&
+          draw_dayjs > now_dayjs
         )
       )
     ) {
@@ -126,6 +134,12 @@ export class ProductsService {
       nft_class_id,
       on_chain_status: onChainStatus.SUCCESS,
     });
+  }
+
+  async get_stock_count(id: string) {
+    return await sqlExceptionCatcher(
+      this.productRepository.findOne(id, { select: ['stock_count'] }),
+    );
   }
 
   async update(id: string, updateProductDto: UpdateProductDto) {

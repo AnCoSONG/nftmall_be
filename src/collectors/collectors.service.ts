@@ -13,6 +13,8 @@ import { sqlExceptionCatcher } from 'src/common/utils';
 import { BsnService } from '../bsn/bsn.service';
 import { requestKeyErrorException } from '../exceptions';
 import { HttpService } from '@nestjs/axios';
+import { InjectRedis } from '@liaoliaots/nestjs-redis';
+import Redis from 'ioredis';
 
 @Injectable()
 export class CollectorsService {
@@ -22,6 +24,7 @@ export class CollectorsService {
     private collectorRepository: Repository<Collector>,
     private readonly bsnService: BsnService,
     private readonly httpService: HttpService,
+    @InjectRedis() private readonly redis: Redis,
   ) {}
 
   async create(createCollectorDto: CreateCollectorDto) {
@@ -167,6 +170,22 @@ export class CollectorsService {
         message: '身份检查失败 ' + res.code,
       };
     }
+  }
+
+  async isdraw(id: number, product_id: string) {
+    const collector = await this.findOne(id);
+    return await this.redis.sismember(
+      `seckill:drawset:${product_id}`,
+      collector.id,
+    );
+  }
+
+  async islucky(id: number, product_id: string) {
+    const collector = await this.findOne(id);
+    return await this.redis.sismember(
+      `seckill:luckyset:${product_id}`,
+      collector.id,
+    );
   }
 
   async update(id: number, updateCollectorDto: UpdateCollectorDto) {

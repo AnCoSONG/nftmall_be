@@ -35,9 +35,25 @@ export class OrdersController {
   list(
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
-    @Query('with_relation', ParseBoolPipe) withRelation: boolean,
+    @Query('with_relation', ParseBoolPipe) with_relation: boolean,
   ) {
-    return this.ordersService.list(page, limit, withRelation);
+    return this.ordersService.list(page, limit, with_relation);
+  }
+
+  @Get('/is_paid')
+  isPaid(
+    @Query('product_id') product_id: string,
+    @Query('collector_id') collector_id: string,
+  ) {
+    return this.ordersService.is_paid(product_id, collector_id);
+  }
+
+  @Get('/is_unpaid')
+  isUnpaid(
+    @Query('product_id') product_id: string,
+    @Query('collector_id') collector_id: string,
+  ) {
+    return this.ordersService.is_unpaid(product_id, collector_id);
   }
 
   @Get(':id')

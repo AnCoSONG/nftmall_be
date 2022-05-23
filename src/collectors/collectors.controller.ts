@@ -14,7 +14,11 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { JoiValidationPipe } from '../pipes/joi-validation.pipe';
 import { CollectorsService } from './collectors.service';
-import { CreateCollectorDto, IDCheckDto } from './dto/create-collector.dto';
+import {
+  CreateCollectorDto,
+  IDCheckDto,
+  IdProductIdDto,
+} from './dto/create-collector.dto';
 import { UpdateCollectorDto } from './dto/update-collector.dto';
 import {
   CreateCollectorSchema,
@@ -33,8 +37,8 @@ export class CollectorsController {
   }
 
   @Get()
-  findAll(@Query('with_relation') withRelation: boolean) {
-    return this.collectorsService.findAll(withRelation);
+  findAll(@Query('with_relation') with_relation: boolean) {
+    return this.collectorsService.findAll(with_relation);
   }
 
   @Get('/list')
@@ -70,6 +74,22 @@ export class CollectorsController {
       idcheckDto.name,
       idcheckDto.id_card,
       idcheckDto.id,
+    );
+  }
+
+  @Post('/isdraw')
+  isdraw(@Body() isDrawDto: IdProductIdDto) {
+    return this.collectorsService.isdraw(
+      isDrawDto.collector_id,
+      isDrawDto.product_id,
+    );
+  }
+
+  @Post('/islucky')
+  islucky(@Body() isLuckyDto: IdProductIdDto) {
+    return this.collectorsService.islucky(
+      isLuckyDto.collector_id,
+      isLuckyDto.product_id,
     );
   }
 

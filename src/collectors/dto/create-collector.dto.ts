@@ -22,3 +22,11 @@ export class IDCheckDto {
   @ApiProperty({ description: '姓名', example: '张三' })
   name: string;
 }
+
+export class IdProductIdDto {
+  @ApiProperty({ description: '用户ID', example: 1 })
+  collector_id: number;
+
+  @ApiProperty({ description: '产品ID', example: 'string' })
+  product_id: string;
+}

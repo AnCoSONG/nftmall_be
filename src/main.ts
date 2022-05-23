@@ -14,6 +14,7 @@ import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
 
 async function bootstrap() {
+  // todo: production level logger config
   const fastifyAdapter = new FastifyAdapter({ logger: true, trustProxy: true });
   // fastifyAdapter.register(fastifyCompress);
   // fastifyAdapter.register(fastifyCookie, {
