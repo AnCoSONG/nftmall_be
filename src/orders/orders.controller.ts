@@ -15,6 +15,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { onChainStatus, PaymentStatus } from '../common/const';
+import { CollectorId } from '../decorators';
 
 @ApiTags('订单')
 @Controller('orders')
@@ -32,28 +33,43 @@ export class OrdersController {
     return this.ordersService.findAll();
   }
 
+  // @Get('/list')
+  // list(
+  //   @Query('page', ParseIntPipe) page: number,
+  //   @Query('limit', ParseIntPipe) limit: number,
+  //   @Query('with_relation', ParseBoolPipe) with_relation: boolean,
+  //   @Query('query') query: 'all' & PaymentStatus & onChainStatus
+  // ) {
+  //   return this.ordersService.list(page, limit, with_relation, query);
+  // }
   @Get('/list')
-  list(
+  listByCollector(
+    @CollectorId() collector_id: number,
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
     @Query('with_relation', ParseBoolPipe) with_relation: boolean,
     @Query('query') query: 'all' & PaymentStatus & onChainStatus
   ) {
-    return this.ordersService.list(page, limit, with_relation, query);
+    return this.ordersService.list(collector_id, page, limit, with_relation, query);
+  }
+
+  @Get('/byTradeNo')
+  findByTradeNo(@Query('trade_no') trade_no: string, @Query('with_relation') with_relation: boolean) {
+    return this.ordersService.findByTradeNo(trade_no, with_relation);
   }
 
   @Get('/is_paid')
   isPaid(
-    @Query('product_id') product_id: string,
     @Query('collector_id') collector_id: string,
+    @Query('product_id') product_id: string,
   ) {
     return this.ordersService.is_paid(product_id, collector_id);
   }
 
   @Get('/is_unpaid')
   isUnpaid(
+    @Query('collector_id') collector_id: number,
     @Query('product_id') product_id: string,
-    @Query('collector_id') collector_id: string,
   ) {
     return this.ordersService.is_unpaid(product_id, collector_id);
   }

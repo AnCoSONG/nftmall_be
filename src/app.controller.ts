@@ -42,12 +42,12 @@ export class AppController {
       },
     });
   }
-  @Get('/test2')
-  test2() {
+  @Get('/get_transactions')
+  test2(@Query('operation_id') operation_id: string) {
     // return this.bsnService.get_transactions(
     //   '620FA1C5E0A1DF97CD09BA4E6E3F50487142FFCEB7F05A9C576FD34CAC9E843D',
     // );
-    return this.bsnService.get_transactions('xfcvimgcuq11ro4128p8');
+    return this.bsnService.get_transactions(operation_id);
   }
 
   @Get('/get_accounts')

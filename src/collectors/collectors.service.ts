@@ -1,6 +1,8 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,13 +11,13 @@ import { Repository } from 'typeorm';
 import { CreateCollectorDto } from './dto/create-collector.dto';
 import { UpdateCollectorDto } from './dto/update-collector.dto';
 import { Collector } from './entities/collector.entity';
-import { sqlExceptionCatcher } from 'src/common/utils';
+import { redisExceptionCatcher, sqlExceptionCatcher } from 'src/common/utils';
 import { BsnService } from '../bsn/bsn.service';
 import { requestKeyErrorException } from '../exceptions';
 import { HttpService } from '@nestjs/axios';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
-
+import { CryptoJsService } from '../lib/crypto-js/crypto-js.service';
 @Injectable()
 export class CollectorsService {
   private readonly logger = new Logger(CollectorsService.name);
@@ -25,11 +27,23 @@ export class CollectorsService {
     private readonly bsnService: BsnService,
     private readonly httpService: HttpService,
     @InjectRedis() private readonly redis: Redis,
+    private readonly cryptoJsService: CryptoJsService,
   ) {}
 
   async create(createCollectorDto: CreateCollectorDto) {
-    //! 创建时不上链，避免没必要的花费，参与抽签必须要上链，用户可以申请上链或者参与抽签自动上链
+    // 创建时直接上链
+    const result = await this.findByUsername(createCollectorDto.username)
+    if (result !== 0) {
+      return {
+        message: '重复用户名'
+      }
+    }
     const collector = this.collectorRepository.create(createCollectorDto);
+    const createAccountRes = await this.bsnService.create_account(collector.username)
+    if (createAccountRes.code) {
+      throw new InternalServerErrorException('Error when create bsn account')
+    }
+    collector.bsn_address = createAccountRes.account // 设置BSN地址
     return await sqlExceptionCatcher(this.collectorRepository.save(collector));
   }
 
@@ -37,6 +51,14 @@ export class CollectorsService {
     return await sqlExceptionCatcher(
       this.collectorRepository.find({
         relations: with_relation ? ['orders', 'collections'] : [],
+      }),
+    );
+  }
+
+  async findByUsername(username: string) {
+    return await sqlExceptionCatcher(
+      this.collectorRepository.count({
+        where: { username },
       }),
     );
   }
@@ -49,6 +71,13 @@ export class CollectorsService {
     );
     if (!collector) {
       throw new NotFoundException(`Collector with id ${id} not found`);
+    }
+    if (collector.real_id && collector.real_name) {
+      delete collector.real_id;
+      delete collector.real_name;
+      collector['is_verified'] = true;
+    } else {
+      collector['is_verified'] = false;
     }
     return collector;
   }
@@ -112,8 +141,10 @@ export class CollectorsService {
   }
 
   async isIdCheck(id: number) {
-    const collector = (await this.findOne(id)) as Collector;
-    if (collector.real_name && collector.real_id) {
+    const collector = (await this.findOne(id)) as Collector & {
+      is_verified: boolean;
+    };
+    if (collector.is_verified) {
       // real name 和 real id 都不为空
       return true;
     } else {
@@ -121,7 +152,10 @@ export class CollectorsService {
     }
   }
 
-  async idcheck(name: string, idcard: string, id: number) {
+  async idcheck(_name: string, _idcard: string, id: number) {
+    const name = this.cryptoJsService.decrypt(_name);
+    const idcard = this.cryptoJsService.decrypt(_idcard);
+    // console.log(name, idcard);
     const isChecked = await this.isIdCheck(id);
     if (isChecked) {
       return {
@@ -182,10 +216,25 @@ export class CollectorsService {
 
   async islucky(id: number, product_id: string) {
     const collector = await this.findOne(id);
-    return await this.redis.sismember(
-      `seckill:luckyset:${product_id}`,
-      collector.id,
+    const isExist = await redisExceptionCatcher(
+      this.redis.exists(`seckill:luckyset:${product_id}`),
     );
+    if (isExist === 0) {
+      return -1; // 还未生成
+    } else if (isExist === 1) {
+      // 0 不存在，1存在
+      return await redisExceptionCatcher(
+        this.redis.sismember(`seckill:luckyset:${product_id}`, collector.id),
+      );
+    } else {
+      throw new InternalServerErrorException(
+        '[ERROR] collectors.islucky redis retval wrong: ' + isExist,
+      );
+    }
+  }
+
+  async addCredit(id: number, addonCredit: number) {
+    const res = await this.collectorRepository.increment({id}, 'credit', addonCredit)
   }
 
   async update(id: number, updateCollectorDto: UpdateCollectorDto) {

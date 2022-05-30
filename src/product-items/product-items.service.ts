@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { onChainStatus } from '../common/const';
@@ -11,6 +11,7 @@ import { ProductItem } from './entities/product-item.entity';
 
 @Injectable()
 export class ProductItemsService {
+  private readonly logger = new Logger(ProductItemsService.name)
   constructor(
     @InjectRepository(ProductItem)
     private readonly productItemRepository: Repository<ProductItem>,
@@ -42,7 +43,7 @@ export class ProductItemsService {
     );
   }
 
-  async list(page: number, limit: number, with_relation = false) {
+  async list(collector_id: number, page: number, limit: number, with_relation = false) {
     if (page <= 0 || limit <= 0) {
       throw new requestKeyErrorException(
         'page and limit must be greater than 0',
@@ -51,7 +52,10 @@ export class ProductItemsService {
     const [data, total] = await sqlExceptionCatcher(
       this.productItemRepository.findAndCount({
         order: { update_date: 'DESC' },
-        relations: with_relation ? ['product', 'owner'] : [],
+        relations: with_relation ? ['product', 'owner', 'product.publisher'] : [],
+        where: {
+          owner_id: collector_id
+        },
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -67,7 +71,7 @@ export class ProductItemsService {
   async findOne(id: string, with_relation = false) {
     const product_item = await sqlExceptionCatcher(
       this.productItemRepository.findOne(id, {
-        relations: with_relation ? ['product', 'owner'] : [],
+        relations: with_relation ? ['product', 'owner', 'product.publisher'] : [],
       }),
     );
     if (!product_item) {
@@ -105,10 +109,18 @@ export class ProductItemsService {
     });
   }
 
-  async onChainFail(id: string) {
+  async onChainFail(id: string, operation_id: string) {
     return await this.update(id, {
       on_chain_status: onChainStatus.FAILED,
+      operation_id
     });
+  }
+
+  async onChainPending(id: string, operation_id: string) {
+    return await this.update(id, {
+      on_chain_status: onChainStatus.PENDING,
+      operation_id,
+    })
   }
 
   async onChainSuccess(
@@ -116,14 +128,27 @@ export class ProductItemsService {
     nft_id: string,
     nft_class_id: string,
     operation_id: string,
+    tx_hash: string,
   ) {
+    this.logger.log(`[ON CHAIN SUCCESS] ${nft_class_id} ${nft_id} ${tx_hash}`)
     return await this.update(id, {
       nft_id,
       nft_class_id,
       operation_id,
       on_chain_status: onChainStatus.SUCCESS,
-      on_chain_timestamp: new Date()
+      on_chain_timestamp: new Date(),
+      tx_hash
     });
+  }
+
+  async getCollectionCount(collector_id: number, product_id: string) {
+    const count = await sqlExceptionCatcher(this.productItemRepository.count({
+      where: {
+        owner_id: collector_id,
+        product_id
+      }
+    }))
+    return count;
   }
 
   async update(id: string, updateProductItemDto: UpdateProductItemDto) {

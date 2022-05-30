@@ -16,6 +16,8 @@ import { ThrottlerBehindProxyGuard } from '../guards/throttler-behind-proxy.guar
 import { CreateProductDto } from '../products/dto/create-product.dto';
 import { AffairService } from './affair.service';
 import { DrawDto, PayDto, SeckillDto, WxCallbackDto } from './common.dto';
+import { CollectorId } from '../decorators';
+import { JwtGuard } from '../auth/guards/jwt.guard';
 
 @ApiTags('事务')
 @Controller('affair')
@@ -44,19 +46,20 @@ export class AffairController {
   }
 
   @Post('/seckill')
-  seckill(@Body() seckillDto: SeckillDto) {
+  @UseGuards(JwtGuard)
+  seckill(@CollectorId() collector_id: number, @Body() seckillDto: SeckillDto) {
     return this.affairService.seckill(
-      seckillDto.collector_id,
+      collector_id,
       seckillDto.product_id,
     );
   }
 
   @Post('/draw')
   @Throttle(500, 60)
-  @UseGuards(ThrottlerBehindProxyGuard)
-  draw(@Body() drawDto: DrawDto) {
+  @UseGuards(JwtGuard, ThrottlerBehindProxyGuard)
+  draw(@CollectorId() collector_id: number, @Body() drawDto: DrawDto) {
     return this.affairService.participate_draw(
-      drawDto.collector_id,
+      collector_id,
       drawDto.product_id,
     );
   }

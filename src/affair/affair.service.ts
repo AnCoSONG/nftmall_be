@@ -29,6 +29,7 @@ import { PublishersService } from '../publishers/publishers.service';
 import WXPAY from 'wechatpay-node-v3';
 import { WxCallbackDto } from './common.dto';
 import { ConfigService } from '@nestjs/config';
+import { boolean } from 'joi';
 
 @Injectable()
 export class AffairService {
@@ -123,7 +124,7 @@ export class AffairService {
       `seckill:drawend:${createProductRes.id}`,
       setTimeout(async () => {
         // console.log(createProductRes.id, createProductRes.publish_count);
-        const res = await this.get_lucky_set(
+        const res = await this.gen_luckyset(
           createProductRes.id,
           createProductRes.publish_count * 2, // todo: 抽到的要比实际发售的多，这里设置为2倍
         );
@@ -142,7 +143,7 @@ export class AffairService {
             `seckill:drawend:${createProductRes.id} not found: ${e}`,
           );
         }
-      }, this.dayjsService.dayjsify(createProductRes.draw_end_timestamp) - this.dayjsService.dayjsify()),
+      }, this.dayjsService.dayjsify(createProductRes.draw_end_timestamp).valueOf() - this.dayjsService.dayjsify().valueOf()),
     );
 
     //* 生成假数据
@@ -281,7 +282,7 @@ export class AffairService {
     }
   }
 
-  async get_lucky_set(product_id: string, count: number) {
+  async gen_luckyset(product_id: string, count: number) {
     const lucky_member = await this.redis.srandmember(
       `seckill:drawset:${product_id}`,
       count,
@@ -324,7 +325,7 @@ export class AffairService {
       `seckill:sale_timestamp:${product_id}`,
       `seckill:drawset:${product_id}`,
       `seckill:luckyset:${product_id}`,
-      `seckill:buyset:${product_id}`,
+      `seckill:buyhash:${product_id}`,
     );
     return deleteRes >= 4;
   }
@@ -352,7 +353,16 @@ export class AffairService {
     if (!collector.bsn_address) {
       return {
         code: 5,
-        message: 'collector must have bsn account',
+        message: '购买者必须拥有区块链钱包账户',
+      };
+    }
+    if (
+      !(collector.real_name && collector.real_id) &&
+      !collector['is_verified']
+    ) {
+      return {
+        code: 6,
+        message: '购买者必须完成实名认证',
       };
     }
     if (
@@ -363,31 +373,34 @@ export class AffairService {
     ) {
       return {
         code: 4,
-        message: 'not time yet.',
+        message: '还未到时间',
       };
     }
 
     // lua高并发原子化控制
+    // todo: buyhash增加是否应该放在支付完成后
+    // todo: 秒杀脚本优化，增加一个藏品set，记录no：stock=3 => stock = 3 & set(0,1,2); get_stock_count: get stock; return_stock: stock++ & sadd set return_no; buy: stock -- & spop set, return pop value;
     const seckillRes = await this.redis.seckill(
       `seckill:luckyset:${product_id}`,
       `seckill:stock:${product_id}`,
-      `seckill:buyset:${product_id}`,
+      `seckill:buyhash:${product_id}`,
       collector_id,
+      product.limit,
     );
     if (seckillRes == -2) {
       return {
         code: 2,
-        message: 'no permission',
+        message: '该藏品您不无权限购买',
       };
     } else if (seckillRes == -1) {
       return {
         code: 1,
-        message: 'no stock',
+        message: '藏品已无库存',
       };
     } else if (seckillRes == -3) {
       return {
         code: 3,
-        message: 'bought',
+        message: '已达到购买上限',
       };
     } else if (seckillRes >= 0) {
       // 已抢到
@@ -436,7 +449,7 @@ export class AffairService {
     const payRes = await this.wxpay.transactions_h5({
       description: '测试',
       out_trade_no: order.trade_no,
-      notify_url: 'http://localhost:5001/v1/affair/paymentCallback',
+      notify_url: 'https://api.jinyuanshuzi.com/v1/affair/paymentCallback',
       attach: order.id,
       amount: {
         total: parseFloat(order.sum_price) * 100,
@@ -463,7 +476,7 @@ export class AffairService {
   // todo 根据实际情况调整回调处理方案
   //* payment_complete / payment_cancel
   async payment_callback(body: WxCallbackDto) {
-    console.log(body);
+    console.log('收到微信callback', body);
     try {
       const result = this.wxpay.decipher_gcm(
         body.resource.ciphertext,
@@ -533,15 +546,17 @@ export class AffairService {
         order_id,
         this.dayjsService.date(),
         out_trade_id,
+        parseFloat(order.sum_price) * 100,
       ) as Promise<Order>,
       // owner更新
       this.productItemsService.update(product_item.id, {
         owner_id: order.buyer.id,
       }) as Promise<ProductItem>,
-      // 积分更新
-      this.collectorService.update(order.buyer.id, {
-        credit: (Number(order.sum_price) * 0.01).toString(),
-      }),
+      // 增加积分
+      this.collectorService.addCredit(
+        order.buyer.id,
+        parseFloat(order.sum_price) * 100,
+      ),
     ]);
     //* 藏品上链
     const createNftRes = await this.bsnService.create_nft({
@@ -566,7 +581,7 @@ export class AffairService {
         delay: 3000,
         backoff: {
           type: 'exponential',
-          delay: 3000,
+          delay: 4000,
         },
         timeout: 30000,
       },
@@ -580,7 +595,7 @@ export class AffairService {
 
   /**
    * todo: 根据实际情况调整
-   * * 超时未支付/取消支付：1. 归还库存 2. buyset删除用户 3. 取消订单 4. 取消timeout
+   * * 超时未支付/取消支付：1. 归还库存 2. buyhash减购买量 3. 取消订单 4. 取消timeout
    * @param order_id 订单号
    */
   async payment_cancel(order_id: string) {
@@ -600,11 +615,13 @@ export class AffairService {
     if (order.payment_status !== PaymentStatus.UNPAID) {
       throw new BadRequestException('order is paid or canceled');
     }
-    const timeoutRes = await Promise.all([
+    const cancelRes = await Promise.all([
       this.redis.incr(`seckill:stock:${order.product_item.product_id}`),
-      this.redis.srem(
-        `seckill:buyset:${order.product_item.product_id}`,
-        order.buyer_id,
+      // todo: 转化为lua脚本，防止出现负数购买量
+      this.redis.hincrby(
+        `seckill:buyhash:${order.product_item.product_id}`,
+        order.buyer_id.toString(),
+        -1,
       ),
       this.ordersService.cancel(order_id).catch((err) => {
         this.logger.error(err);
@@ -617,9 +634,9 @@ export class AffairService {
       this.logger.warn('no timeout found:' + err);
     }
     return {
-      returnStock: timeoutRes[0],
-      removeBuyerRes: timeoutRes[1],
-      cancelOrderRes: timeoutRes[2],
+      returnStock: cancelRes[0],
+      removeBuyerRes: cancelRes[1],
+      cancelOrderRes: cancelRes[2],
     };
   }
 

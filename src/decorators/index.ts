@@ -4,6 +4,7 @@ import {
   SetMetadata,
 } from '@nestjs/common';
 import { FastifyRequest } from 'fastify';
+import { decode } from 'jsonwebtoken';
 
 export const Role = (role: string) => SetMetadata('role', role);
 
@@ -18,5 +19,13 @@ export const RequestLogger = createParamDecorator(
   (data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest<FastifyRequest>();
     return request.log;
+  },
+);
+
+export const CollectorId = createParamDecorator(
+  (data: unknown, ctx: ExecutionContext) => {
+    const request = ctx.switchToHttp().getRequest<FastifyRequest>();
+    const decoded = decode(request.cookies['xc']) as { id: string };
+    return decoded.id;
   },
 );

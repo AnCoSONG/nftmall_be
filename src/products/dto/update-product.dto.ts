@@ -23,4 +23,7 @@ export class UpdateProductDto extends PartialType(CreateProductDto) {
 
   @ApiProperty({ description: 'BSN操作ID' })
   operation_id?: string;
+
+  @ApiProperty({ description: '交易哈希' })
+  tx_hash?: string;
 }

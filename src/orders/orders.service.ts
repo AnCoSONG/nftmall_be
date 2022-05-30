@@ -35,10 +35,22 @@ export class OrdersService {
     );
   }
 
+  async findByTradeNo(trade_no: string, with_relation: boolean) {
+    return await sqlExceptionCatcher(
+      this.orderRepository.find({
+        order: { update_date: 'DESC' },
+        where: { trade_no },
+        relations: with_relation ? ['product_item', 'buyer', 'product_item.product']: []
+      }),
+    );
+  }
+
   async findOne(id: string, with_relation?: boolean) {
     const order = await sqlExceptionCatcher(
       this.orderRepository.findOne(id, {
-        relations: with_relation ? ['product_item', 'buyer'] : [],
+        relations: with_relation
+          ? ['product_item', 'buyer', 'product_item.product']
+          : [],
       }),
     );
     if (!order) {
@@ -48,6 +60,7 @@ export class OrdersService {
   }
 
   async list(
+    collector_id: number,
     page: number,
     limit: number,
     with_releation = false,
@@ -65,6 +78,9 @@ export class OrdersService {
           relations: with_releation
             ? ['product_item', 'buyer', 'product_item.product']
             : [],
+          where: {
+            buyer_id: collector_id,
+          },
           skip: (page - 1) * limit,
           take: limit,
         }),
@@ -88,6 +104,7 @@ export class OrdersService {
             ? ['product_item', 'buyer', 'product_item.product']
             : [],
           where: {
+            buyer_id: collector_id,
             payment_status: query,
           },
           skip: (page - 1) * limit,
@@ -108,6 +125,7 @@ export class OrdersService {
             ? ['product_item', 'buyer', 'product_item.product']
             : ['product_item', 'product_item.product'],
           where: {
+            buyer_id: collector_id,
             payment_status: 'paid',
             product_item: {
               on_chain_status: query,
@@ -133,11 +151,17 @@ export class OrdersService {
     });
   }
 
-  async paid(id: string, pay_timestamp: Date, out_trade_id: string) {
+  async paid(
+    id: string,
+    pay_timestamp: Date,
+    out_trade_id: string,
+    gen_credit: number,
+  ) {
     return await this.update(id, {
       payment_status: PaymentStatus.PAID,
       pay_timestamp: pay_timestamp,
       out_trade_id,
+      gen_credit,
     });
   }
 
@@ -166,26 +190,31 @@ export class OrdersService {
     return res === 1;
   }
 
-  async is_unpaid(product_id: string, buyer_id: string) {
+  async is_unpaid(product_id: string, buyer_id: number) {
     const res = await sqlExceptionCatcher(
-      this.orderRepository
-        .createQueryBuilder('order')
-        .where('buyer_id = :buyer_id', { buyer_id })
-        .leftJoinAndSelect('order.product_item', 'product_item')
-        .where('product_item.product_id = :product_id', { product_id })
-        .andWhere('order.payment_status = :payment_status', {
+      this.orderRepository.find({
+        order: { update_date: 'DESC' },
+        relations: ['product_item', 'product_item.product'],
+        where: {
+          buyer_id: buyer_id,
+          product_item: {
+            product_id: product_id,
+          },
           payment_status: PaymentStatus.UNPAID,
-        })
-        .getMany(),
+        },
+      }) as Promise<Order[]>,
     );
     if (res.length === 1) {
-      return res[0].id;
+      return {
+        code: 1, // 有未支付
+        order_id: res[0].id,
+      };
     } else if (res.length === 0) {
-      return null;
+      return {
+        code: 0,
+      };
     } else {
-      throw new InternalServerErrorException(
-        'db error, unpaid order duplicated',
-      );
+      throw new InternalServerErrorException('db error, multiple unpaid order');
     }
   }
 

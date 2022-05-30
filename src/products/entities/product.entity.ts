@@ -29,10 +29,13 @@ export class Product {
   description: string;
 
   @Column()
-  preview_img: string;
+  preview_img: string; // 首页商品预览图
 
   @Column()
-  src: string; // store the product resource hosted in CDN
+  preview_src: string; // 藏品预览资源 购买页面/藏品详情页面展示 可能均为3D模型
+
+  @Column()
+  src: string; // 藏品实际资源 图像？音频？视频？3D模型本体
   // will show in the product page
 
   @Column({
@@ -93,6 +96,9 @@ export class Product {
 
   @Column({ type: 'varchar', nullable: true })
   operation_id: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  tx_hash: string | null;
 
   @Column({ nullable: true })
   publisher_id: string;

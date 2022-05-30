@@ -53,6 +53,9 @@ export class ProductItem {
   @Column({ type: 'varchar', length: 255, nullable: true })
   operation_id: string | null;
 
+  @Column({ type: 'varchar', length: 255, nullable: true }) //交易哈希
+  tx_hash: string | null;
+
   @Column({ type: 'enum', enum: onChainStatus, default: onChainStatus.PENDING })
   on_chain_status: onChainStatus;
 

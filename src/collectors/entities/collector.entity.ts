@@ -16,7 +16,7 @@ export class Collector {
   @PrimaryGeneratedColumn('increment', { type: 'int', unsigned: true })
   id: number;
 
-  @Column({ type: 'varchar', length: 10, unique: true })
+  @Column({ type: 'varchar', length: 20, unique: true })
   username: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
@@ -37,8 +37,11 @@ export class Collector {
   @Column({ type: 'varchar', length: 18, nullable: true })
   real_id: string | null;
 
-  @Column({ type: 'decimal', default: '0.00', precision: 10, scale: 2 })
-  credit: string;
+  @Column({ type: 'int', default: 0 })
+  credit: number;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  wx_openid?: string;
 
   @OneToMany(() => Order, (order) => order.buyer, {
     cascade: true,
@@ -61,4 +64,5 @@ export class Collector {
 
   @DeleteDateColumn({ type: 'timestamp' })
   delete_date: Date;
+
 }

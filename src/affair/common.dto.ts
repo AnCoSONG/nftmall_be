@@ -3,15 +3,11 @@ import { ApiProperty } from '@nestjs/swagger';
 export class SeckillDto {
   @ApiProperty()
   product_id: string;
-  @ApiProperty()
-  collector_id: number;
 }
 
 export class DrawDto {
   @ApiProperty()
   product_id: string;
-  @ApiProperty()
-  collector_id: number;
 }
 
 export class WxCallbackDto {

@@ -18,14 +18,21 @@ export class CreateProductDto {
   description: string;
 
   @ApiProperty({
-    description: '商品预览图',
+    description: '藏品预览图(首页)',
     example: 'https://picsum.photos/400/300?random=3',
     required: true,
   })
   preview_img: string;
 
   @ApiProperty({
-    description: '商品资源',
+    description: '藏品购买页预览资源（图片或模型)',
+    example: 'https://picsum.photos/400/300?random=3',
+    required: true,
+  })
+  preview_src: string;
+
+  @ApiProperty({
+    description: '藏品真实资源',
     example: 'https://picsum.photos/500/500?random=100',
     required: true,
   })

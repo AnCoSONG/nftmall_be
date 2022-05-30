@@ -1,9 +1,11 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { string } from 'joi';
 import { Repository } from 'typeorm';
 import { BsnService } from '../bsn/bsn.service';
 import { onChainStatus } from '../common/const';
@@ -17,6 +19,7 @@ import { Product } from './entities/product.entity';
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name)
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
@@ -116,9 +119,10 @@ export class ProductsService {
     return product;
   }
 
-  async onChainFail(id: string) {
+  async onChainFail(id: string, operation_id: string) {
     return await this.update(id, {
       on_chain_status: onChainStatus.FAILED,
+      operation_id
     });
   }
 
@@ -129,10 +133,19 @@ export class ProductsService {
     });
   }
 
-  async onChainSuccess(id: string, nft_class_id: string) {
+  async onChainPending(id: string, operation_id: string) {
+    return await this.update(id, {
+      on_chain_status: onChainStatus.PENDING,
+      operation_id: operation_id,
+    })
+  }
+
+  async onChainSuccess(id: string, nft_class_id: string, tx_hash:string) {
+    this.logger.log(`[ON CHAIN SUCCESS] ${nft_class_id} ${tx_hash}`)
     return await this.update(id, {
       nft_class_id,
       on_chain_status: onChainStatus.SUCCESS,
+      tx_hash,
     });
   }
 

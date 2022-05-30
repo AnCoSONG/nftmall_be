@@ -2,6 +2,8 @@ import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService, JwtVerifyOptions, JwtSignOptions } from '@nestjs/jwt';
@@ -13,14 +15,18 @@ import { SendCodeDto } from './dto/send-code.dto';
 import { ConfigService } from '@nestjs/config';
 import { Collector } from '../collectors/entities/collector.entity';
 import { AuthError } from '../common/const';
+import { AliService } from '../ali/ali.service';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     @InjectRedis() private redis: Redis,
     private readonly collectorService: CollectorsService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly aliService: AliService,
   ) {}
   // 发送验证码
   async sendCode(sendCodeDto: SendCodeDto) {
@@ -36,9 +42,23 @@ export class AuthService {
       ), // default: 5分钟过期
     );
     if (res === 'OK') {
-      return 'send code success';
+      const sendCodeRes = await this.aliService.sendCode(
+        sendCodeDto.phone,
+        code,
+      );
+      if (sendCodeRes.code.toLowerCase() === 'ok') {
+        this.logger.log(`send code ${code} to ${sendCodeDto.phone} success.`);
+        return 'send code success';
+      } else {
+        this.logger.error(
+          `Send code error: ${sendCodeRes.code} - ${sendCodeRes.message}`,
+        );
+        throw new InternalServerErrorException(
+          '[ERROR] SEND CODE: Ali Service ERROR',
+        );
+      }
     } else {
-      throw new Error('send code fail');
+      throw new InternalServerErrorException('[ERROR] SEND CODE: Redis error');
     }
   }
 
@@ -67,13 +87,13 @@ export class AuthService {
       newCollector = await this.collectorService.create({
         phone: loginDto.phone,
         // 后4位
-        username: `藏家${loginDto.phone.substring(7)}`,
+        username: `藏家${loginDto.phone.substring(7)}${randomBytes(4).toString('hex')}`,
         avatar: `https://avatars.dicebear.com/api/pixel-art/${loginDto.phone}.svg`,
       });
     }
     // 拿到用户信息
     const collector = data.length === 1 ? data[0] : newCollector;
-    console.log('拿到用户信息', collector);
+    this.logger.log('拿到用户信息', collector);
     // 1. 生成access_token & refresh_token
     const access_token = this.jwtService.sign({
       id: collector.id,
@@ -93,7 +113,7 @@ export class AuthService {
         algorithm: this.configService.get('jwt.refresh_algorithm'),
       },
     );
-    console.log(
+    this.logger.log(
       '生成access_token & refresh_token',
       access_token,
       refresh_token,
@@ -102,7 +122,7 @@ export class AuthService {
     const del_res = await redisExceptionCatcher(
       this.redis.del(collector.phone),
     ); // 异步删除phone对应的code
-    console.log('删除redis中的验证码', del_res);
+    this.logger.log('删除redis中的验证码', del_res);
     // 3. redis中设置refresh_token，仅可使用一次，即refresh时删除旧的refreshToken
     const set_res = await redisExceptionCatcher(
       this.redis.set(
@@ -112,7 +132,7 @@ export class AuthService {
         14 * 24 * 60 * 60, // 14天过期
       ),
     );
-    console.log('redis中设置refresh_token', set_res);
+    this.logger.log('redis中设置refresh_token', set_res);
     return {
       access_token,
       refresh_token,
@@ -130,7 +150,7 @@ export class AuthService {
       } else if (err.name === 'InvalidTokenError') {
         return AuthError.INVALID; // 无效
       } else {
-        console.error(err);
+        this.logger.error(err);
         return AuthError.UNKNOWN; // 未知错误
       }
     }
@@ -158,9 +178,7 @@ export class AuthService {
 
   async fetchUserInfo(access_token: string) {
     const { id } = this.jwtDecode(access_token);
-    const collector = await sqlExceptionCatcher(
-      this.collectorService.findOne(id),
-    );
+    const collector = await this.collectorService.findOne(id);
     return collector;
   }
 

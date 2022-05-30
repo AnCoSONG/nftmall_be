@@ -15,9 +15,12 @@ export class UpdateProductItemDto extends PartialType(CreateProductItemDto) {
   @ApiProperty({ example: null })
   operation_id?: string;
 
+  @ApiProperty({ example: null })
+  tx_hash?: string;
+
   @ApiProperty({ example: onChainStatus.PENDING })
   on_chain_status?: onChainStatus;
 
-  @ApiProperty({example: new Date()})
+  @ApiProperty({ example: new Date() })
   on_chain_timestamp?: Date;
 }

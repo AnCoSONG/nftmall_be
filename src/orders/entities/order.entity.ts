@@ -1,4 +1,4 @@
-import { PaymentStatus, SupportPayment } from 'src/common/const';
+import { PaymentStatus, RefundStatus, SupportPayment } from 'src/common/const';
 import {
   Column,
   CreateDateColumn,
@@ -52,6 +52,9 @@ export class Order {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: '0.00' })
   sum_price: string;
 
+  @Column({type: 'int', default: 0})
+  gen_credit: number;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   out_payment_id: string | null; // 外部订单号，比如微信支付订单号
 
@@ -68,6 +71,20 @@ export class Order {
     default: PaymentStatus.UNPAID,
   })
   payment_status: PaymentStatus;
+
+  @Column({
+    type: 'enum',
+    enum: RefundStatus,
+    default: RefundStatus.NOREFUND,
+  })
+  refund_status: RefundStatus;
+
+  @Column({
+    type: 'timestamp',
+    width: 6,
+    nullable: true
+  })
+  refund_timestamp: Date;
 
   @VersionColumn({ type: 'smallint', unsigned: true })
   version: number;

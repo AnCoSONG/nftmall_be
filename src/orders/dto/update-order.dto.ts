@@ -6,8 +6,8 @@ export class UpdateOrderDto extends PartialType(CreateOrderDto) {
   @ApiProperty({ example: new Date() })
   pay_timestamp?: Date;
 
-  @ApiProperty({ example: '0.00' })
-  gen_credit?: string;
+  @ApiProperty({ example: 0 })
+  gen_credit?: number;
 
   @ApiProperty({ enum: PaymentStatus, example: PaymentStatus.PAID })
   payment_status?: PaymentStatus;

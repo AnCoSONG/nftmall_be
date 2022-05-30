@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DAYJS_SYMBOL } from './dayjs.provider';
+import * as Dayjs from 'dayjs'
 @Injectable()
 export class DayjsService {
-  constructor(@Inject(DAYJS_SYMBOL) private readonly dayjs) {}
+  constructor(@Inject(DAYJS_SYMBOL) private readonly dayjs: typeof Dayjs) {}
 
   gen_time_ms(): number {
     return this.dayjs().valueOf();

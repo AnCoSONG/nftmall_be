@@ -24,10 +24,10 @@ export enum DisplayMode {
 }
 
 export enum onChainStatus {
-  SUCCESS = 'success',
-  PROCESSING = 'processing',
-  FAILED = 'failed',
-  PENDING = 'pending',
+  SUCCESS = 'success', // 成功
+  PROCESSING = 'processing', // 处理中
+  FAILED = 'failed', // 上链失败
+  PENDING = 'pending', // 待上链
 }
 
 export const phoneReg =
@@ -45,3 +45,17 @@ export type Tag = {
   name: string;
   mode?: DisplayMode;
 };
+
+export enum BSN_TX_STATUS {
+  PROCESSING = 0,
+  SUCCESS = 1,
+  FAILED = 2,
+  PENDING = 3,
+}
+
+export enum RefundStatus {
+  NOREFUND = 'no_refund',
+  PROCESSING = 'processing',
+  FAILED = 'FAILED',
+  SUCCESS = 'SUCCESS',
+}

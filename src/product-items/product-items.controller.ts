@@ -31,13 +31,19 @@ export class ProductItemsController {
     return this.productItemsService.findAll(with_relation);
   }
 
-  @Get('/list')
+  @Get('/list/:collector_id')
   list(
+    @Param('collector_id', ParseIntPipe) collector_id: number,
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
     @Query('with_relation') with_relation: boolean,
   ) {
-    return this.productItemsService.list(page, limit, with_relation);
+    return this.productItemsService.list(collector_id, page, limit, with_relation);
+  }
+
+  @Get('/get_collection_count/:collector_id')
+  getCollectionCount(@Param('collector_id') collector_id: number, @Query('product_id') product_id: string) {
+    return this.productItemsService.getCollectionCount(collector_id, product_id);
   }
 
   @Get(':id')

@@ -1,6 +1,7 @@
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from '../auth/auth.module';
 import { BsnModule } from '../bsn/bsn.module';
 import { CollectorsModule } from '../collectors/collectors.module';
 import { LibModule } from '../lib/lib.module';
@@ -18,6 +19,7 @@ import { AffairService } from './affair.service';
     ProductsModule,
     PublishersModule,
     OrdersModule,
+    AuthModule, // import when use jwt guard because jwt guard require auth service
     ProductItemsModule,
     ConfigModule,
     CollectorsModule,

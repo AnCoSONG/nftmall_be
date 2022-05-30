@@ -10,8 +10,11 @@ import {
   ParseIntPipe,
   Query,
   ParseBoolPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { JwtGuard } from '../auth/guards/jwt.guard';
+import { CollectorId } from '../decorators';
 import { JoiValidationPipe } from '../pipes/joi-validation.pipe';
 import { CollectorsService } from './collectors.service';
 import {
@@ -68,13 +71,27 @@ export class CollectorsController {
     return this.collectorsService.findByPhone(phone, with_relation);
   }
 
+  @Get('/byUsername')
+  findByUsername(
+    @Query('username') username: string,
+  ) {
+    return this.collectorsService.findByUsername(username)
+  }
+
   @Post('/idcheck')
-  idcheck(@Body() idcheckDto: IDCheckDto) {
+  @UseGuards(JwtGuard)
+  idcheck(@CollectorId() collector_id: number, @Body() idcheckDto: IDCheckDto) {
     return this.collectorsService.idcheck(
       idcheckDto.name,
       idcheckDto.id_card,
-      idcheckDto.id,
+      collector_id,
     );
+  }
+
+  @Get('/isIdCheck')
+  @UseGuards(JwtGuard)
+  isIdCheck(@CollectorId() collector_id: number) {
+    return this.collectorsService.isIdCheck(collector_id);
   }
 
   @Post('/isdraw')
@@ -91,6 +108,11 @@ export class CollectorsController {
       isLuckyDto.collector_id,
       isLuckyDto.product_id,
     );
+  }
+
+  @Post('/addCredit')
+  addCredit(@Query('id') id: number, @Query('credit') credit: number) {
+    return this.collectorsService.addCredit(id, credit)
   }
 
   @Get(':id')

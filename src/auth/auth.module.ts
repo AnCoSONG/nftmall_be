@@ -1,14 +1,16 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { CollectorsModule } from '../collectors/collectors.module';
 import { JwtModule } from '@nestjs/jwt';
 import { Algorithm } from 'jsonwebtoken';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AliModule } from '../ali/ali.module';
+import { JwtGuard } from './guards/jwt.guard';
 
 @Module({
   imports: [
-    CollectorsModule,
+    forwardRef(() => CollectorsModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -21,9 +23,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
       inject: [ConfigService],
     }),
+    AliModule,
   ],
-  providers: [AuthService],
+  providers: [AuthService, JwtGuard],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, JwtGuard],
 })
 export class AuthModule {}

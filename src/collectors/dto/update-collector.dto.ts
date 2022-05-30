@@ -14,6 +14,6 @@ export class UpdateCollectorDto extends PartialType(CreateCollectorDto) {
     example: '1231213128381sw1ey21hd12h8gd19',
   })
   bsn_address?: string;
-  @ApiProperty({ description: '积分', example: '1.00' })
-  credit?: string;
+  @ApiProperty({ description: '积分', example: 1 })
+  credit?: number;
 }

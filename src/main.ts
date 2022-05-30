@@ -12,10 +12,11 @@ import { fastifyCookie } from '@fastify/cookie';
 import FastifyCsrf from 'fastify-csrf';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
+import minimist = require('minimist');
 
 async function bootstrap() {
   // todo: production level logger config
-  const fastifyAdapter = new FastifyAdapter({ logger: true, trustProxy: true });
+  const fastifyAdapter = new FastifyAdapter({ trustProxy: true });
   // fastifyAdapter.register(fastifyCompress);
   // fastifyAdapter.register(fastifyCookie, {
   //   secret: 'anco',
@@ -28,7 +29,7 @@ async function bootstrap() {
         origin:
           process.env.NODE_ENV === 'dev'
             ? 'http://localhost:3000'
-            : 'http://mall.jinyuanshuzi.com',
+            : 'https://www.jinyuanshuzi.com',
         credentials: true,
       },
     },
@@ -68,6 +69,13 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
-  await app.listen(5001);
+  const argv = minimist(process.argv.slice(2));
+  // console.log(argv['port']);
+  // console.log(123);
+  if (!argv['port']) {
+    await app.listen(5001);
+  } else {
+    await app.listen(argv['port']);
+  }
 }
 bootstrap();

@@ -21,6 +21,10 @@ export default () => {
       refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN,
       refresh_algorithm: process.env.JWT_REFRESH_ALGORITHM,
     },
+    aliyun: {
+      access_key_id: process.env.ALIYUN_ACCESS_KEY_ID,
+      access_key_secret: process.env.ALIYUN_ACCESS_KEY_SECRET,
+    },
     smscode: {
       expires_in: process.env.SMSCODE_EXPIRES_IN,
     },
