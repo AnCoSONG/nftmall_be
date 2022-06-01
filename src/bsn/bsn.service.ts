@@ -96,7 +96,7 @@ export class BsnService {
       this.logger.error(
         `${err.response.data.error.code_space} - ${err.response.data.error.code} - ${err.response.data.error.message}`,
       );
-      return err.response.data;
+      return err.response.data.error;
     }
   }
 

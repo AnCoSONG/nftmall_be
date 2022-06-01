@@ -58,9 +58,15 @@ export class CollectorsController {
     return await this.collectorsService.getCollections(+id);
   }
 
-  @Post('/:id/apply')
+  @Post('/createBsnAccount/:id')
   async applyForChain(@Param('id', ParseIntPipe) id: string) {
     return await this.collectorsService.applyForChain(+id);
+  }
+
+  @Post('/applyBsnAccount')
+  @UseGuards(JwtGuard)
+  async applyForAccount(@CollectorId() collector_id: number) {
+    return await this.collectorsService.applyForChain(collector_id);
   }
 
   @Get('/byPhone')

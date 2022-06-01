@@ -91,7 +91,8 @@ export class AffairProcessor {
       `queue:status:create-product-items:${job.data.product_id}`,
       'processing',
     );
-    for (let i = 0; i < job.data.count; i++) {
+    // begin from 1, like: [1, count] 
+    for (let i = 1; i <= job.data.count; i++) {
       const createRes = await this.productItemsService.create({
         product_id: job.data.product_id,
         no: i,

@@ -94,7 +94,8 @@ export class AffairController {
     return this.affairService.payment_complete(order_id, out_trade_id);
   }
 
-  @Post('/sim_paymentCancel')
+  @Post('/orderCancel')
+  @UseGuards(JwtGuard)
   payment_cancel(@Query('order_id') order_id: string) {
     return this.affairService.payment_cancel(order_id);
   }

@@ -105,6 +105,7 @@ export class AffairService {
     );
     // * 创建redis抢购所需数据类型
     // * seckill:stock:<product_id> 记录库存
+    // * seckill:items:<product_id> 记录藏品序号
     // * seckill:sale_timestamp:<product_id> 记录开售时间
     // * seckill:drawset:<product_id> 记录抽签集合
     // * seckill:luckyset:<product_id> 通过srandmember得到
@@ -113,10 +114,20 @@ export class AffairService {
         `seckill:stock:${createProductRes.id}`,
         createProductRes.publish_count,
       ),
+      this.redis.sadd(
+        `seckill:items:${createProductRes.id}`,
+        new Array(createProductRes.publish_count)
+          .fill(0)
+          .map((item, index) => index + 1),
+      ),
       this.redis.set(
         `seckill:sale_timestamp:${createProductRes.id}`,
         createProductRes.sale_timestamp.valueOf(),
       ),
+      //* 初始化抽签表
+      this.redis.sadd(`seckill:drawset:${createProductRes.id}`, -1),
+      //* 初始化中签表
+      this.redis.sadd(`seckill:luckyset:${createProductRes.id}`, -1),
     ]);
 
     // 抽签结束回调，生成lucky set供购买时检查
@@ -124,22 +135,16 @@ export class AffairService {
       `seckill:drawend:${createProductRes.id}`,
       setTimeout(async () => {
         // console.log(createProductRes.id, createProductRes.publish_count);
-        const res = await this.gen_luckyset(
+        await this.genLuckySet(
           createProductRes.id,
           createProductRes.publish_count * 2, // todo: 抽到的要比实际发售的多，这里设置为2倍
         );
-        if (res === -1) {
-          this.logger.error('Nobody draw...');
-        } else {
-          this.logger.log('Lucky set generated');
-        }
-        // 完成后清空timeout
         try {
           this.schedulerRegistry.deleteTimeout(
             `seckill:drawend:${createProductRes.id}`,
           );
         } catch (e) {
-          this.logger.error(
+          this.logger.warn(
             `seckill:drawend:${createProductRes.id} not found: ${e}`,
           );
         }
@@ -282,20 +287,30 @@ export class AffairService {
     }
   }
 
-  async gen_luckyset(product_id: string, count: number) {
+  async genLuckySet(product_id: string, count: number) {
     const lucky_member = await this.redis.srandmember(
       `seckill:drawset:${product_id}`,
       count,
     );
-    if (lucky_member.length === 0) {
+    if (lucky_member.length === 1) {
       // 无人参加
-      return -1;
+      this.logger.warn('No real user participate in draw...');
+      return;
     }
     const saddRes = await this.redis.sadd(
       `seckill:luckyset:${product_id}`,
       lucky_member as number[],
     );
-    return saddRes; // 1
+    if (saddRes >= 1) {
+      this.logger.log(
+        `seckill:luckyset:${product_id} generated! Count: ${lucky_member.length}`,
+      );
+    } else {
+      this.logger.error(
+        `seckill:luckyset:${product_id} generates failed! Redis response: ${saddRes}`,
+      );
+    }
+    return;
   }
 
   async destory(product_id: string) {
@@ -311,23 +326,18 @@ export class AffairService {
 
   /**
    * 根据product id清空秒杀缓存
-   * 包括 ：
-   * seckill:stock:<product_id>
-   * seckill:sale_timestamp:<product_id>
-   * seckill:drawset:<product_id>
-   * seckill:luckyset:<product_id>
-   * drawend timeout
    * @param product_id
    */
   async clearSeckillCache(product_id: string) {
     const deleteRes = await this.redis.del(
       `seckill:stock:${product_id}`,
+      `seckill:items:${product_id}`,
       `seckill:sale_timestamp:${product_id}`,
       `seckill:drawset:${product_id}`,
       `seckill:luckyset:${product_id}`,
       `seckill:buyhash:${product_id}`,
     );
-    return deleteRes >= 4;
+    return deleteRes;
   }
 
   /**
@@ -384,27 +394,30 @@ export class AffairService {
       `seckill:luckyset:${product_id}`,
       `seckill:stock:${product_id}`,
       `seckill:buyhash:${product_id}`,
+      `seckill:items:${product_id}`,
       collector_id,
       product.limit,
     );
     if (seckillRes == -2) {
       return {
         code: 2,
-        message: '该藏品您不无权限购买',
+        message: '该藏品您无权限购买',
       };
     } else if (seckillRes == -1) {
       return {
         code: 1,
-        message: '藏品已无库存',
+        message: '藏品已售罄',
       };
     } else if (seckillRes == -3) {
       return {
         code: 3,
-        message: '已达到购买上限',
+        message: '已达购买上限',
       };
-    } else if (seckillRes >= 0) {
+    } else if (seckillRes > 0) {
+      // [1, count]
       // 已抢到
-      // 添加订单到数据库
+      // 找到对应的记录
+      // todo: 创建对应的记录 ？可行性分析 & 实现
       const product_item =
         await this.productItemsService.findOneByProductIdAndNo(
           product_id,
@@ -615,13 +628,13 @@ export class AffairService {
     if (order.payment_status !== PaymentStatus.UNPAID) {
       throw new BadRequestException('order is paid or canceled');
     }
-    const cancelRes = await Promise.all([
-      this.redis.incr(`seckill:stock:${order.product_item.product_id}`),
-      // todo: 转化为lua脚本，防止出现负数购买量
-      this.redis.hincrby(
+    const [returnStockRes, cancelOrderRes] = await Promise.all([
+      this.redis.returnStock(
+        `seckill:stock:${order.product_item.product_id}`,
         `seckill:buyhash:${order.product_item.product_id}`,
+        `seckill:items:${order.product_item.product_id}`,
         order.buyer_id.toString(),
-        -1,
+        order.product_item.no,
       ),
       this.ordersService.cancel(order_id).catch((err) => {
         this.logger.error(err);
@@ -634,9 +647,8 @@ export class AffairService {
       this.logger.warn('no timeout found:' + err);
     }
     return {
-      returnStock: cancelRes[0],
-      removeBuyerRes: cancelRes[1],
-      cancelOrderRes: cancelRes[2],
+      returnStockRes,
+      cancelOrderRes
     };
   }
 

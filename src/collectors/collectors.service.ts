@@ -43,7 +43,7 @@ export class CollectorsService {
     if (createAccountRes.code) {
       throw new InternalServerErrorException('Error when create bsn account')
     }
-    collector.bsn_address = createAccountRes.account // 设置BSN地址
+    collector.bsn_address = createAccountRes.account ?? null // 设置BSN地址
     return await sqlExceptionCatcher(this.collectorRepository.save(collector));
   }
 
@@ -125,7 +125,6 @@ export class CollectorsService {
       const res = await this.update(id, { bsn_address: bsnAccount.account });
       return {
         message: 'apply for chain success',
-        collector: res,
       };
     } else {
       // 已经上链，则提示已经上链

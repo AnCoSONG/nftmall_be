@@ -2,6 +2,7 @@ import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BsnService } from './bsn.service';
+import { BsnController } from './bsn.controller';
 
 @Module({
   imports: [
@@ -16,5 +17,6 @@ import { BsnService } from './bsn.service';
   ],
   providers: [BsnService],
   exports: [BsnService],
+  controllers: [BsnController],
 })
 export class BsnModule {}
