@@ -122,14 +122,19 @@ export class CollectorsService {
       const bsnAccount = await this.bsnService.create_account(
         collector.username,
       );
+      if (bsnAccount.code) {
+        throw new InternalServerErrorException('BSN Error when create account')
+      }
       const res = await this.update(id, { bsn_address: bsnAccount.account });
       return {
-        message: 'apply for chain success',
+        code: 0,
+        message: '上链成功',
       };
     } else {
       // 已经上链，则提示已经上链
       return {
-        message: '已上链',
+        code: 1,
+        message: '请勿重复申请上链',
       };
     }
   }
