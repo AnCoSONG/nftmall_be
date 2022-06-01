@@ -19,14 +19,17 @@ export class ProductItemsService {
   ) {}
   async create(createProductItemDto: CreateProductItemDto) {
     //* 检查是否有这个id
-    await sqlExceptionCatcher(
-      this.productsService.findOne(createProductItemDto.product_id),
+    const product = await sqlExceptionCatcher(
+      this.productsService.findOne(createProductItemDto.product_id, true),
     );
     const product_item =
       this.productItemRepository.create(createProductItemDto);
-    return await sqlExceptionCatcher(
+    const created_item = await sqlExceptionCatcher(
       this.productItemRepository.save(product_item),
     );
+    created_item.product = product
+    return created_item
+    
   }
 
   // _createBatch(product_id: string, count: number) {

@@ -117,29 +117,29 @@ export class CollectorsController {
   }
 
   @Post('/addCredit')
-  addCredit(@Query('id') id: number, @Query('credit') credit: number) {
+  addCredit(@Query('id',ParseIntPipe) id: number, @Query('credit', ParseIntPipe) credit: number) {
     return this.collectorsService.addCredit(id, credit)
   }
 
   @Get(':id')
   findOne(
-    @Param('id', ParseIntPipe) id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Query('with_relation', ParseBoolPipe) with_relation: boolean,
   ) {
-    return this.collectorsService.findOne(+id, with_relation);
+    return this.collectorsService.findOne(id, with_relation);
   }
 
   @Patch(':id')
   @UsePipes(new JoiValidationPipe(UpdateCollectorSchema))
   update(
-    @Param('id', ParseIntPipe) id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateCollectorDto: UpdateCollectorDto,
   ) {
-    return this.collectorsService.update(+id, updateCollectorDto);
+    return this.collectorsService.update(id, updateCollectorDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.collectorsService.remove(+id);
+  remove(@Param('id') id: number) {
+    return this.collectorsService.remove(id);
   }
 }

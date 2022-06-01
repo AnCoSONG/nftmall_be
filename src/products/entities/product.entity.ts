@@ -54,10 +54,10 @@ export class Product {
   @Column({ type: 'json', default: null, nullable: true })
   details: string[]; // 图像数组
 
-  @Column({ type: 'smallint', unsigned: true })
+  @Column({ type: 'int', unsigned: true })
   publish_count: number; // 发行数量
 
-  @Column({ type: 'smallint', unsigned: true })
+  @Column({ type: 'int', unsigned: true })
   stock_count: number; // 库存数量
 
   @Column({ type: 'tinyint', unsigned: true })

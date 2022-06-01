@@ -14,7 +14,7 @@ import Redis from 'ioredis';
 import { BsnService } from '../bsn/bsn.service';
 import { CollectorsService } from '../collectors/collectors.service';
 import { Collector } from '../collectors/entities/collector.entity';
-import { PaymentStatus } from '../common/const';
+import { onChainStatus, PaymentStatus } from '../common/const';
 import { sqlExceptionCatcher } from '../common/utils';
 import { DayjsService } from '../lib/dayjs/dayjs.service';
 import { WXPAY_SYMBOL } from '../lib/wxpay.provider';
@@ -30,6 +30,7 @@ import WXPAY from 'wechatpay-node-v3';
 import { WxCallbackDto } from './common.dto';
 import { ConfigService } from '@nestjs/config';
 import { boolean } from 'joi';
+import { Publisher } from '../publishers/entities/publisher.entity';
 
 @Injectable()
 export class AffairService {
@@ -60,49 +61,21 @@ export class AffairService {
       createProductDto,
     );
     //* 上链
-    const createNftClassRes = await this.bsnService.create_nft_class({
-      owner: publisher.bsn_address,
-      name: createProductRes.name,
-    });
-    if (createNftClassRes.code) {
-      throw new BadRequestException(
-        'bsnService.create_nft_class failed ' + createNftClassRes.message,
-      );
-    }
-    this.logger.log(
-      'create-nft-class-operation-id: ' + createNftClassRes.operation_id,
-    );
-
-    //* 生成链上nft class id并异步写入product，为之后product创建product item上链做准备（因为上链发行nft必须要nft class)
-    this.affairQueue.add(
-      'update-nft-class-id',
-      {
-        product_id: createProductRes.id,
-        operation_id: createNftClassRes.operation_id,
-      },
-      {
-        delay: 3000,
-        backoff: {
-          type: 'exponential',
-          delay: 3000,
-        },
-        attempts: 10,
-        timeout: 30000,
-        // removeOnComplete: true,
-      },
-    );
+    const create_nft_class_id_operation_id =
+      await this._create_nft_class_id_for_product(createProductRes, publisher);
 
     //* 创建product items
-    this.affairQueue.add(
-      'create-product-items',
-      {
-        product_id: createProductRes.id,
-        count: createProductRes.publish_count,
-      },
-      {
-        delay: 3000,
-      },
-    );
+    //! Breaking change: 新发行藏品购买后才会创建Items
+    // this.affairQueue.add(
+    //   'create-product-items',
+    //   {
+    //     product_id: createProductRes.id,
+    //     count: createProductRes.publish_count,
+    //   },
+    //   {
+    //     delay: 3000,
+    //   },
+    // );
     // * 创建redis抢购所需数据类型
     // * seckill:stock:<product_id> 记录库存
     // * seckill:items:<product_id> 记录藏品序号
@@ -124,10 +97,11 @@ export class AffairService {
         `seckill:sale_timestamp:${createProductRes.id}`,
         createProductRes.sale_timestamp.valueOf(),
       ),
-      //* 初始化抽签表
-      this.redis.sadd(`seckill:drawset:${createProductRes.id}`, -1),
-      //* 初始化中签表
-      this.redis.sadd(`seckill:luckyset:${createProductRes.id}`, -1),
+      // // 初始化抽签表
+      // this.redis.sadd(`seckill:drawset:${createProductRes.id}`, -1),
+      // // 初始化中签表
+      //! luckyset不存在前端方便判断当前系统状况
+      // this.redis.sadd(`seckill:luckyset:${createProductRes.id}`, -1),
     ]);
 
     // 抽签结束回调，生成lucky set供购买时检查
@@ -175,44 +149,76 @@ export class AffairService {
     // );
 
     return {
-      operation_id: createNftClassRes.operation_id,
-      createProductRes,
+      operation_id: create_nft_class_id_operation_id,
+    };
+  }
+
+  async create_nft_class_id_for_product(product_id: string) {
+    const product = (await this.productsService.findOne(
+      product_id,
+      true,
+    )) as Product;
+    if (product.on_chain_status === onChainStatus.SUCCESS) {
+      return {
+        code: 1,
+        message: '已经创建好',
+      };
+    } else if (product.on_chain_status === onChainStatus.PROCESSING) {
+      return {
+        code: 2,
+        message: '请等待当前创建结果返回'
+      }
+    }
+    const operation_id = await this._create_nft_class_id_for_product(
+      product,
+      product.publisher,
+    );
+    return {
+      code: 0,
+      message: '已发起创建NFT Class ID请求, 请等待异步刷新',
+      operation_id,
     };
   }
 
   /**
-   * !手动刷新 nft
-   * !前提是之前的上链任务失败了
-   * @param product_id
-   * @param operation_id
-   * @param retry
-   * @returns
+   * * 内部方法：手动创建nft class id
    */
-  async manual_update_nft_id(
-    product_id: string,
-    operation_id: string,
-    retry = 10,
+  async _create_nft_class_id_for_product(
+    product: Product,
+    publisher: Publisher,
   ) {
+    const createNftClassRes = await this.bsnService.create_nft_class({
+      owner: publisher.bsn_address,
+      name: `${product.name}@晋元数字`,
+    });
+    if (createNftClassRes.code) {
+      throw new BadRequestException(
+        'BsnService.create_nft_class failed: ' + createNftClassRes.message,
+      );
+    }
+    this.logger.log(
+      'create-nft-class-operation-id: ' + createNftClassRes.operation_id,
+    );
+
+    //* 生成链上nft class id并异步写入product，为之后product创建product item上链做准备（因为上链发行nft必须要nft class)
     this.affairQueue.add(
       'update-nft-class-id',
       {
-        product_id: product_id,
-        operation_id: operation_id,
+        product_id: product.id,
+        operation_id: createNftClassRes.operation_id,
       },
       {
         delay: 3000,
         backoff: {
           type: 'exponential',
-          delay: 3000,
+          delay: 4000,
         },
-        attempts: retry,
+        attempts: 10,
         timeout: 30000,
         // removeOnComplete: true,
       },
     );
-    return {
-      message: 'update-nft-class-id-affair-queued',
-    };
+    return createNftClassRes.operation_id;
   }
 
   // queue:status:<job_name>:<product_id>
@@ -238,6 +244,40 @@ export class AffairService {
    */
   async get_drawer_count(product_id: string) {
     return await this.redis.scard(`seckill:drawset:${product_id}`);
+  }
+
+  async add_stock(product_id: string, add_count: number) {
+    const product = (await this.productsService.findOne(product_id)) as Product;
+    // redis更新
+    const redisUpdateRes = await Promise.all([
+      this.redis.incrby(`seckill:stock:${product_id}`, add_count),
+      this.redis.sadd(
+        `seckill:items:${product_id}`,
+        new Array(add_count)
+          .fill(product.publish_count)
+          .map((item, index) => item + index + 1),
+      ),
+    ]);
+    const dbUpdateRes = (await this.productsService.update(product_id, {
+      publish_count: product.publish_count + add_count,
+      stock_count: product.stock_count + add_count,
+    })) as Product;
+    return {
+      redis_stock_count: redisUpdateRes[0],
+      redis_items_add_res: redisUpdateRes[1],
+      db_publish_count: dbUpdateRes.publish_count,
+      db_stock_count: dbUpdateRes.stock_count,
+    };
+  }
+
+  async sync_stock(product_id: string) {
+    const redis_stock_count = await this.redis.get(
+      `seckill:stock:${product_id}`,
+    );
+    const result = (await this.productsService.update(product_id, {
+      stock_count: parseInt(redis_stock_count),
+    })) as Product;
+    return result.stock_count === parseInt(redis_stock_count);
   }
 
   /**
@@ -288,6 +328,13 @@ export class AffairService {
   }
 
   async genLuckySet(product_id: string, count: number) {
+    const exist = await this.redis.exists(`seckill:luckyset:${product_id}`)
+    if (exist === 1) {
+      return {
+        code: 1,
+        message: '已存在'
+      }
+    }
     const lucky_member = await this.redis.srandmember(
       `seckill:drawset:${product_id}`,
       count,
@@ -310,7 +357,10 @@ export class AffairService {
         `seckill:luckyset:${product_id} generates failed! Redis response: ${saddRes}`,
       );
     }
-    return;
+    return {
+      code: 0,
+      message: '已生成'
+    }
   }
 
   async destory(product_id: string) {
@@ -418,12 +468,18 @@ export class AffairService {
       // 已抢到
       // 找到对应的记录
       // todo: 创建对应的记录 ？可行性分析 & 实现
-      const product_item =
-        await this.productItemsService.findOneByProductIdAndNo(
-          product_id,
-          seckillRes,
-          true,
-        );
+      // * 提前创建好秒杀
+      // const product_item =
+      //   await this.productItemsService.findOneByProductIdAndNo(
+      //     product_id,
+      //     seckillRes,
+      //     true,
+      //   );
+      // * 秒杀时临时创建
+      const product_item = await this.productItemsService.create({
+        product_id: product_id,
+        no: seckillRes,
+      });
       const order = await this.ordersService.create({
         product_item_id: product_item.id,
         buyer_id: collector_id,
@@ -572,16 +628,30 @@ export class AffairService {
       ),
     ]);
     //* 藏品上链
+    const operation_id = await this._create_nft_for_product_item(
+      product_item,
+      order,
+    );
+    return {
+      orderUpdateRes,
+      operation_id,
+      ownerUpdateRes,
+    };
+  }
+
+  async _create_nft_for_product_item(product_item: ProductItem, order: Order) {
     const createNftRes = await this.bsnService.create_nft({
       class_id: product_item.product.nft_class_id,
       name: `${product_item.product.name}#${product_item.no
         .toString()
         .padStart(4, '0')}#晋元数藏@${order.buyer.username}(${order.buyer.id})`,
-      uri: product_item.product.src,
+      uri: product_item.product.preview_img,
       recipient: order.buyer.bsn_address,
       data: product_item.id, // 将product_item_id作为data存储，后续查询用户名下藏品的流程是: 查链上用户名下藏品，查到data字段
     });
-    //* 队列内持续拉取最新事务情况
+    if (createNftRes.code) {
+      throw new InternalServerErrorException('bsnService create nft failed...');
+    }
     this.affairQueue.add(
       'update-product-item-nft-id',
       {
@@ -599,11 +669,20 @@ export class AffairService {
         timeout: 30000,
       },
     );
-    return {
-      orderUpdateRes,
-      createNftRes,
-      ownerUpdateRes,
-    };
+    return createNftRes.operation_id;
+  }
+
+  async create_nft_for_product_item(order_id: string) {
+    const order = (await this.ordersService.findOne(order_id, true)) as Order;
+    const product_item = (await this.productItemsService.findOne(
+      order.product_item_id,
+      true,
+    )) as ProductItem;
+    const operation_id = await this._create_nft_for_product_item(
+      product_item,
+      order,
+    );
+    return operation_id;
   }
 
   /**
@@ -648,7 +727,7 @@ export class AffairService {
     }
     return {
       returnStockRes,
-      cancelOrderRes
+      cancelOrderRes,
     };
   }
 

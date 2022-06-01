@@ -40,7 +40,9 @@ export class OrdersService {
       this.orderRepository.find({
         order: { update_date: 'DESC' },
         where: { trade_no },
-        relations: with_relation ? ['product_item', 'buyer', 'product_item.product']: []
+        relations: with_relation
+          ? ['product_item', 'buyer', 'product_item.product']
+          : [],
       }),
     );
   }

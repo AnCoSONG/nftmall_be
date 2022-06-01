@@ -155,6 +155,12 @@ export class ProductsService {
     );
   }
 
+  async add_stock(id: string, count: number) {
+    const product = (await this.findOne(id)) as Product;
+    const updateRes = await this.update(id, { publish_count: product.publish_count + count, stock_count: product.stock_count + count})
+    return updateRes;
+  }
+
   async update(id: string, updateProductDto: UpdateProductDto) {
     const product = await this.findOne(id);
     const merged = this.productRepository.merge(product, updateProductDto);

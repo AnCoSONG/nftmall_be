@@ -1,8 +1,10 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Query,
   Req,
@@ -31,6 +33,16 @@ export class AffairController {
     @Body() createProductDto: CreateProductDto,
   ) {
     return this.affairService.publish(publisher_id, createProductDto);
+  }
+
+  @Post('/addStock/:product_id')
+  addStock(@Param('product_id') product_id: string, @Query('add_count', ParseIntPipe) add_count: number) {
+    return this.affairService.add_stock(product_id, +add_count);
+  }
+
+  @Post('/syncStock/:product_id')
+  syncStock(@Param('product_id') product_id: string) {
+    return this.affairService.sync_stock(product_id);
   }
 
   //! remove in prod
@@ -84,6 +96,24 @@ export class AffairController {
         message: ciphereRes.error,
       });
     }
+  }
+
+  @Post('/manual_createNftForProductItem')
+  create_nft_for_product_item(@Query('order_id') order_id: string) {
+    return this.affairService.create_nft_for_product_item(order_id);
+  }
+
+  @Post('/manual_createNftClassForProduct')
+  create_nft_class_for_product(@Query('product_id') product_id: string) {
+    return this.affairService.create_nft_class_id_for_product(product_id);
+  }
+
+  @Post('/manual_genLuckySet')
+  gen_lucky_set(@Query('product_id') product_id: string, @Query('count', ParseIntPipe) count: number) {
+    if (count <= 0) {
+      throw new BadRequestException(`count cannot less than 1`)
+    }
+    return this.affairService.genLuckySet(product_id, count);
   }
 
   @Post('/sim_paymentComplete')
