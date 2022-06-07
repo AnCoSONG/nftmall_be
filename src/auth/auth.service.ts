@@ -17,6 +17,8 @@ import { Collector } from '../collectors/entities/collector.entity';
 import { AuthError } from '../common/const';
 import { AliService } from '../ali/ali.service';
 import { randomBytes } from 'crypto';
+import { CryptoJsService } from '../lib/crypto-js/crypto-js.service';
+import { HttpService } from '@nestjs/axios';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +29,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly aliService: AliService,
+    private readonly cryptoJsService: CryptoJsService,
+    private readonly httpService: HttpService,
   ) {}
   // 发送验证码
   async sendCode(sendCodeDto: SendCodeDto) {
@@ -87,7 +91,9 @@ export class AuthService {
       newCollector = await this.collectorService.create({
         phone: loginDto.phone,
         // 后4位
-        username: `藏家${loginDto.phone.substring(7)}${randomBytes(4).toString('hex')}`,
+        username: `藏家${loginDto.phone.substring(7)}${randomBytes(4).toString(
+          'hex',
+        )}`,
         avatar: `https://avatars.dicebear.com/api/pixel-art/${loginDto.phone}.svg`,
       });
     }
@@ -224,5 +230,37 @@ export class AuthService {
       access_token,
       refresh_token: refresh_token_new,
     };
+  }
+
+  async fetchOpenid(encrypt_code: string) {
+    const code = this.cryptoJsService.decrypt(encrypt_code);
+    this.logger.debug('decrypt code: ' + code);
+    this.logger.debug('appid: ' + this.configService.get('wxpay.appid'))
+    this.logger.debug('appsecret: ' + this.configService.get('wxpay.appsecret'))
+    const fetchRes = await this.httpService
+      .get<{
+        access_token: string;
+        expires_in: string;
+        refresh_token: string;
+        openid: string;
+        scope: string;
+        errcode: number;
+        errmsg: string;
+      }>(`https://api.weixin.qq.com/sns/oauth2/access_token`, {
+        params: {
+          appid: this.configService.get('wxpay.appid'),
+          secret: this.configService.get('wxpay.appsecret'),
+          code,
+          grant_type: 'authorization_code',
+        },
+      })
+      .toPromise();
+    if (fetchRes.data.errcode) {
+      throw new InternalServerErrorException(
+        `${fetchRes.data.errcode}: ${fetchRes.data.errmsg}`,
+      );
+    } else {
+      return fetchRes.data.openid;
+    }
   }
 }

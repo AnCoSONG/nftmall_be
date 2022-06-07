@@ -42,4 +42,10 @@ export class WxCallbackDto {
 export class PayDto {
   @ApiProperty()
   order_id: string;
+
+  @ApiProperty()
+  openid?: string; // JSAPI支付必须携带
+
+  @ApiProperty()
+  type: 'jsapi' | 'h5' // 支付类型
 }

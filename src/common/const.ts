@@ -59,3 +59,25 @@ export enum RefundStatus {
   FAILED = 'FAILED',
   SUCCESS = 'SUCCESS',
 }
+
+export type CallbackData = {
+  mchid: string;
+  appid: string;
+  out_trade_no: string;
+  transaction_id: string;
+  trade_type: 'JSAPI' | 'NATIVE' | 'APP' | 'MICROPAY' | 'MWEB' | 'FACEPAY';
+  trade_state: 'SUCCESS' | 'REFUND' | 'NOTPAY' | 'CLOSED' | 'REVOKED' | 'USERPAYING' | 'PAYERROR';
+  trade_state_desc: string;
+  bank_type: string;
+  attach: string;
+  sucess_time: string;
+  payer: {
+    openid: string;
+  };
+  amount: {
+    total: number;
+    payer_total: number;
+    currency: string;
+    payer_currency: string;
+  }
+}

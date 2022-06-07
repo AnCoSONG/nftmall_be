@@ -5,6 +5,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -85,6 +86,12 @@ export class AuthController {
   async fetchUserInfo(@Req() req: FastifyRequest) {
     const access_token = req.cookies['xc'];
     return await this.authService.fetchUserInfo(access_token);
+  }
+
+  @Get('/fetchOpenid')
+  // @UseGuards(JwtGuard)
+  async fetchOpenid(@Query('code') encrypt_code: string) {
+    return await this.authService.fetchOpenid(encrypt_code);
   }
 
   //   @Post('/refresh')

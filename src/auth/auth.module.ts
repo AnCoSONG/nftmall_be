@@ -7,6 +7,8 @@ import { Algorithm } from 'jsonwebtoken';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AliModule } from '../ali/ali.module';
 import { JwtGuard } from './guards/jwt.guard';
+import { LibModule } from '../lib/lib.module';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
@@ -24,6 +26,13 @@ import { JwtGuard } from './guards/jwt.guard';
       inject: [ConfigService],
     }),
     AliModule,
+    HttpModule.register({
+      timeout: 30000,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }),
+    LibModule,
   ],
   providers: [AuthService, JwtGuard],
   controllers: [AuthController],

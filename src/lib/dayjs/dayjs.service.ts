@@ -20,4 +20,8 @@ export class DayjsService {
   date(): Date {
     return this.dayjs().toDate();
   }
+
+  time_expire(unit: 'm' | 'h' | 's' = 'm', value: number = 11) {
+    return this.dayjs().add(value, unit).format()
+  }
 }

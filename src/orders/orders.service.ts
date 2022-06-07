@@ -47,7 +47,7 @@ export class OrdersService {
     );
   }
 
-  async findOne(id: string, with_relation?: boolean) {
+  async findOne(id: string, with_relation?: boolean, nothrow=false) {
     const order = await sqlExceptionCatcher(
       this.orderRepository.findOne(id, {
         relations: with_relation
@@ -56,7 +56,11 @@ export class OrdersService {
       }),
     );
     if (!order) {
-      throw new NotFoundException(`Order with id ${id} was not found`);
+      if (nothrow) {
+        return null;
+      } else {
+        throw new NotFoundException(`Order with id ${id} was not found`);
+      }
     }
     return order;
   }

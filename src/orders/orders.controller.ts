@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Query,
   ParseBoolPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -16,6 +17,7 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { onChainStatus, PaymentStatus } from '../common/const';
 import { CollectorId } from '../decorators';
+import { JwtGuard } from '../auth/guards/jwt.guard';
 
 @ApiTags('订单')
 @Controller('orders')
@@ -56,6 +58,12 @@ export class OrdersController {
   @Get('/byTradeNo')
   findByTradeNo(@Query('trade_no') trade_no: string, @Query('with_relation') with_relation: boolean) {
     return this.ordersService.findByTradeNo(trade_no, with_relation);
+  }
+
+  @Get('/fetchPaymentStatus')
+  @UseGuards(JwtGuard)
+  fetchPaymentStatus(@Query('order_id') order_id: string) {
+    return this.ordersService.get_order_payment_status(order_id);
   }
 
   @Get('/is_paid')

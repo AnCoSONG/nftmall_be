@@ -41,6 +41,7 @@ export default () => {
       appid: process.env.WXPAY_APPID,
       mchid: process.env.WXPAY_MCHID,
       apiv3: process.env.WXPAY_APIV3,
+      appsecret: process.env.WXPAY_APPSECRET,
     },
   };
 };

@@ -14,7 +14,7 @@ import Redis from 'ioredis';
 import { BsnService } from '../bsn/bsn.service';
 import { CollectorsService } from '../collectors/collectors.service';
 import { Collector } from '../collectors/entities/collector.entity';
-import { onChainStatus, PaymentStatus } from '../common/const';
+import { CallbackData, onChainStatus, PaymentStatus } from '../common/const';
 import { sqlExceptionCatcher } from '../common/utils';
 import { DayjsService } from '../lib/dayjs/dayjs.service';
 import { WXPAY_SYMBOL } from '../lib/wxpay.provider';
@@ -166,8 +166,8 @@ export class AffairService {
     } else if (product.on_chain_status === onChainStatus.PROCESSING) {
       return {
         code: 2,
-        message: '请等待当前创建结果返回'
-      }
+        message: '请等待当前创建结果返回',
+      };
     }
     const operation_id = await this._create_nft_class_id_for_product(
       product,
@@ -328,18 +328,18 @@ export class AffairService {
   }
 
   async genLuckySet(product_id: string, count: number) {
-    const exist = await this.redis.exists(`seckill:luckyset:${product_id}`)
+    const exist = await this.redis.exists(`seckill:luckyset:${product_id}`);
     if (exist === 1) {
       return {
         code: 1,
-        message: '已存在'
-      }
+        message: '已存在',
+      };
     }
     const lucky_member = await this.redis.srandmember(
       `seckill:drawset:${product_id}`,
       count,
     );
-    if (lucky_member.length === 1) {
+    if (lucky_member.length === 0) {
       // 无人参加
       this.logger.warn('No real user participate in draw...');
       return;
@@ -359,8 +359,8 @@ export class AffairService {
     }
     return {
       code: 0,
-      message: '已生成'
-    }
+      message: '已生成',
+    };
   }
 
   async destory(product_id: string) {
@@ -507,81 +507,207 @@ export class AffairService {
   }
 
   // todo: 支付接口测试
-  async pay(order_id: string, ip: string) {
+  async pay(
+    order_id: string,
+    ip: string,
+    type: 'jsapi' | 'h5',
+    openid?: string,
+  ) {
     // todo: 改进参数，根据前端实际情况传递需要的参数
     const order = (await this.ordersService.findOne(order_id, true)) as Order;
     if (order.payment_status === PaymentStatus.PAID) {
-      throw new BadRequestException('order is already paid');
+      throw new BadRequestException('订单已完成支付');
     } else if (order.payment_status === PaymentStatus.CANCELED) {
-      throw new BadRequestException('order is canceled');
+      throw new BadRequestException('订单已取消');
     }
-    const payRes = await this.wxpay.transactions_h5({
-      description: '测试',
-      out_trade_no: order.trade_no,
-      notify_url: 'https://api.jinyuanshuzi.com/v1/affair/paymentCallback',
-      attach: order.id,
-      amount: {
-        total: parseFloat(order.sum_price) * 100,
-        currency: 'CNY',
-      },
-      scene_info: {
-        payer_client_ip: ip,
-        h5_info: {
-          type: 'Wap',
-          app_name: '晋元数藏商城',
-          app_url: 'jinyuanshucang.com',
+    let payRes;
+    if (type === 'h5') {
+      payRes = await this.wxpay.transactions_h5({
+        description: order.product_item.product.description, // description用于商品描述
+        out_trade_no: order.trade_no, // 内部订单号，满足要求 [6,32]
+        notify_url: 'https://api.jinyuanshuzi.com/v1/affair/paymentCallback', // 通知地址
+        attach: order.id, // 附加数据存放order.id
+        time_expire: this.dayjsService.time_expire('m', 11),
+        amount: {
+          total: parseFloat(order.sum_price) * 100,
+          currency: 'CNY',
         },
-      },
-    });
-    if (payRes.status !== 200) {
-      return {
-        payRes: payRes,
-      };
+        scene_info: {
+          payer_client_ip: ip,
+          h5_info: {
+            type: 'Wap',
+            app_name: '晋元数藏商城',
+            app_url: 'jinyuanshucang.com',
+          },
+        },
+      });
+    } else if (type === 'jsapi') {
+      if (!openid) {
+        throw new BadRequestException('无OpenID');
+      }
+      // console.log(order_id, ip, type, openid);
+      payRes = await this.wxpay
+        .transactions_jsapi({
+          description: order.product_item.product.description,
+          out_trade_no: order.trade_no,
+          notify_url: 'https://api.jinyuanshuzi.com/v1/affair/paymentCallback',
+          time_expire: this.dayjsService.time_expire('m', 11),
+          attach: order.id,
+          amount: {
+            total: parseFloat(order.sum_price) * 100,
+            currency: 'CNY',
+          },
+          scene_info: {
+            payer_client_ip: ip,
+          },
+          payer: {
+            openid: openid,
+          },
+        })
+        .catch((err) => {
+          console.error(err);
+          this.logger.error(err);
+          return err;
+        });
+      // console.log(payRes);
+    }
+    if (payRes.status === 200) {
+      return payRes;
     } else {
-      throw new InternalServerErrorException(payRes.message);
+      throw new InternalServerErrorException(payRes);
     }
   }
 
   // todo 根据实际情况调整回调处理方案
   //* payment_complete / payment_cancel
   async payment_callback(body: WxCallbackDto) {
-    console.log('收到微信callback', body);
     try {
       const result = this.wxpay.decipher_gcm(
         body.resource.ciphertext,
         body.resource.associated_data,
         body.resource.nonce,
         this.configService.get('wxpay.apiv3'),
-      ) as Record<string, any>;
-      const payment_status = await this.ordersService.get_order_payment_status(
-        result.attach,
-      );
-      if (payment_status !== PaymentStatus.PAID) {
-        return { code: 1, message: 'order is already paid', error: '' };
-      }
-      if (result.trade_state === 'SUCCESS') {
-        return { code: 0, message: 'success', error: '' };
-      } else if (result.trade_state === 'NOTPAY') {
-        //* 未支付时应当设置为unpaid
-        await this.ordersService.update(result.attach, {
-          payment_status: PaymentStatus.UNPAID,
-        });
-        return { code: 2, message: 'not pay', error: '' };
-      }
-      // console.log(result);
-      return { code: 0, result: result, error: '' }; // 给controller进一步解析
+      ) as CallbackData;
+      return await this._cope_with_payment(result);
     } catch (err) {
-      console.log(err.code);
-      return { code: 100, error: `${err.code}: ${err.message}`, result: '' };
+      this.logger.error(`[PAYMENT_CALLBACK_ERROR]: ${err}`);
+      return { code: 100, message: err };
     }
   }
 
-  // todo: 根据实际情况调整，去掉一些不需要加载的内容
-  // !支付成功: 1. 删除timeout 2. 设置订单为已支付，设置支付时间 3. 藏品上链
-  // ?前端限制用户实际timeout时间应该少 10 秒，防止边界情况同时处理支付完成和支付超时
+  async _cope_with_payment(result: CallbackData) {
+    this.logger.log('回调结果: ' + JSON.stringify(result));
+    const order = (await this.ordersService.findOne(
+      result.attach,
+      true,
+      true, // 找不到不抛出
+    )) as Order;
+    if (!order) {
+      return { code: -1 }; // 如果找不到(手动删掉)按已支付处理
+    }
+    if (order.payment_status === PaymentStatus.PAID) {
+      this.logger.warn(`Order: ${order.id} 已支付！`);
+      //? 如果用户已经支付，直接返回
+      return { code: 1 }; // 已支付
+    } else if (order.payment_status === PaymentStatus.CANCELED) {
+      return { code: 3, message: '订单已被取消' }; //订单已取消
+    }
+    //! 如果没有支付收到了支付结果通知
+    if (result.trade_state === 'SUCCESS') {
+      // 完成支付
+      const res = await this._payment_success(order, result.transaction_id);
+      if (res.code === 10000) {
+        return { code: 0 }; // 支付成功
+      } else {
+        return { code: res.code, message: res.message };
+      }
+    } else {
+      // 支付失败或者其他原因
+      this.logger.error(result);
+      await this.ordersService.update(result.attach, {
+        payment_status: PaymentStatus.UNPAID,
+      });
+      return { code: 2, message: result.trade_state }; // 莫名原因
+    }
+  }
+
+  //* 供Callback内部使用的方法
+  async _payment_success(order: Order, transaction_id: string) {
+    /**
+     * * 1.删除订单取消timeout
+     * * 2.更新订单状态
+     * * 3.藏品上链
+     */
+    const product_item = (await this.productItemsService.findOne(
+      order.product_item_id,
+      true,
+    )) as ProductItem;
+    if (!product_item.product.nft_class_id) {
+      return { code: 10001, message: '产品还未上链' };
+    }
+    if (!order.buyer.bsn_address) {
+      return { code: 10002, message: '用户无区块链钱包地址' };
+    }
+    //! 1. 删除订单取消的Timeout
+    try {
+      this.schedulerRegistry.deleteTimeout(`seckill:cancel:${order.id}`);
+    } catch (err) {
+      this.logger.warn('no timeout found:' + err);
+    }
+    //! 2. 更新订单状态
+    const [orderUpdate, ownerUpdate, creditUpdate] = await Promise.all([
+      // 更新订单支付情况
+      this.ordersService
+        .paid(
+          order.id,
+          this.dayjsService.date(),
+          transaction_id,
+          parseFloat(order.sum_price) * 100,
+        )
+        .catch((err) => {
+          this.logger.error(`[ERROR when update order(${order.id})]: ${err}`);
+          return null;
+        }) as Promise<Order | null>,
+      // owner更新
+      this.productItemsService
+        .update(product_item.id, {
+          owner_id: order.buyer_id,
+        })
+        .catch((err) => {
+          this.logger.error(
+            `[ERROR when update product item(${product_item.id}) owner]: ${err}`,
+          );
+          return null;
+        }) as Promise<ProductItem>,
+      // 增加积分
+      this.collectorService
+        .addCredit(order.buyer_id, parseFloat(order.sum_price) * 100)
+        .catch((err) => {
+          this.logger.error(
+            `[ERROR when update collector(${order.buyer_id})]: ${err}`,
+          );
+          return null;
+        }),
+    ]);
+    if (!orderUpdate) {
+      return { code: 10003, message: '订单支付更新失败' };
+    }
+    if (!ownerUpdate) {
+      return { code: 10004, message: '藏品所有者更新失败' };
+    }
+    if (!creditUpdate) {
+      return { code: 10005, message: '藏家积分更新失败' };
+    }
+    //! 3. 藏品上链
+    await this._create_nft_for_product_item(product_item, order);
+    return { code: 10000, message: '订单完成,待藏品上链' };
+  }
+
+  // !手动完成支付，当用户因为各种原因支付不成功时手动帮用户完成支付
+  // * 支付成功: 1. 删除timeout 2. 设置订单为已支付，设置支付时间 3. 藏品上链
+  // !前端限制用户实际timeout时间应该少 10 秒，防止边界情况同时处理支付完成和支付超时
   // 1. 设置订单数据，用户积分更新
-  // 2. 队列任务：用户在链上铸造一个nft，ownera为用户自己的地址，铸造完成后绑定nft_id即可完成确权
-  // ? (用户花的能量是应用方的能力对吧？)
+  // 2. 队列任务：用户在链上铸造一个nft，owner为用户自己的地址，铸造完成后绑定nft_id即可完成确权
   // 3. 返回订单数据
   async payment_complete(order_id: string, out_trade_id: string) {
     //* 查表获取所需数据
@@ -732,7 +858,21 @@ export class AffairService {
   }
 
   async fetch_payment_result(trade_no: string) {
-    const res = await this.wxpay.query({ out_trade_no: trade_no });
-    // todo: 根据订单返回结果设置order状态
+    let error;
+    const result = (await this.wxpay
+      .query({
+        out_trade_no: trade_no,
+      })
+      .catch((err) => {
+        error = `[ERROR when fetch payment result]: ${err}`;
+        this.logger.error(error);
+        return null;
+      })) as CallbackData;
+    if (result) {
+      const res = await this._cope_with_payment(result);
+      return res;
+    } else {
+      throw new InternalServerErrorException(error);
+    }
   }
 }

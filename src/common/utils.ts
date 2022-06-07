@@ -1,4 +1,5 @@
 import { RedisException, SqlException } from '../exceptions';
+import {randomBytes} from 'crypto';
 // wrapper every sql
 export const sqlExceptionCatcher = async (cb: Promise<any>) => {
   // catch except or return original value
@@ -20,8 +21,5 @@ export const redisExceptionCatcher = async (cb: Promise<any>) => {
 
 // 生成订单token，返回给客户端，支付订单必须携带。
 export const getIdepmotentValue = () => {
-  return (
-    Math.random().toString(36).substr(2, 8) +
-    Math.random().toString(36).substr(2, 8)
-  );
+  return randomBytes(8).toString('hex');
 };

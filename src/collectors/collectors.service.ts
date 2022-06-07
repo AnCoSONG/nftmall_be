@@ -32,18 +32,20 @@ export class CollectorsService {
 
   async create(createCollectorDto: CreateCollectorDto) {
     // 创建时直接上链
-    const result = await this.findByUsername(createCollectorDto.username)
+    const result = await this.findByUsername(createCollectorDto.username);
     if (result !== 0) {
       return {
-        message: '重复用户名'
-      }
+        message: '重复用户名',
+      };
     }
     const collector = this.collectorRepository.create(createCollectorDto);
-    const createAccountRes = await this.bsnService.create_account(collector.username)
+    const createAccountRes = await this.bsnService.create_account(
+      collector.username,
+    );
     if (createAccountRes.code) {
-      throw new InternalServerErrorException('Error when create bsn account')
+      throw new InternalServerErrorException('Error when create bsn account');
     }
-    collector.bsn_address = createAccountRes.account ?? null // 设置BSN地址
+    collector.bsn_address = createAccountRes.account ?? null; // 设置BSN地址
     return await sqlExceptionCatcher(this.collectorRepository.save(collector));
   }
 
@@ -123,7 +125,7 @@ export class CollectorsService {
         collector.username,
       );
       if (bsnAccount.code) {
-        throw new InternalServerErrorException('BSN Error when create account')
+        throw new InternalServerErrorException('BSN Error when create account');
       }
       const res = await this.update(id, { bsn_address: bsnAccount.account });
       return {
@@ -181,6 +183,15 @@ export class CollectorsService {
       if (res.data.result === 0) {
         // data.result: 0 一致，1 不一致，2 无记录
         // 一致 -> 更新用户realname和real_id
+        if (!res.data.birthday) {
+          throw new InternalServerErrorException('no birthday field');
+        }
+        if (!this.isAgeQualified(res.data.birthday)) {
+          return {
+            code: 4,
+            message: '未满16岁的用户不允许使用本平台，实名认证不予通过。',
+          };
+        }
         const updateRes = await this.update(id, {
           real_name: name,
           real_id: idcard,
@@ -238,7 +249,12 @@ export class CollectorsService {
   }
 
   async addCredit(id: number, addonCredit: number) {
-    const res = await this.collectorRepository.increment({id}, 'credit', addonCredit)
+    const res = await this.collectorRepository.increment(
+      { id },
+      'credit',
+      addonCredit,
+    );
+    return res;
   }
 
   async update(id: number, updateCollectorDto: UpdateCollectorDto) {
@@ -254,5 +270,35 @@ export class CollectorsService {
 
   async remove(id: number) {
     return await sqlExceptionCatcher(this.collectorRepository.delete(id));
+  }
+
+  async isAgeQualified(birthday: string) {
+    const year = parseInt(birthday.slice(0, 4));
+    const month = parseInt(birthday.slice(4, 6));
+    const day = parseInt(birthday.slice(6, 8));
+    const date = new Date();
+    const currentYear = date.getFullYear();
+    const currentMonth = date.getMonth() + 1;
+    const currentDay = date.getDate();
+    const age = currentYear - year;
+    if (age > 16) {
+      return true;
+    } else {
+      if (age < 16) {
+        return false;
+      } else {
+        if (currentMonth < month) {
+          return false;
+        } else if (currentMonth > month) {
+          return true;
+        } else {
+          if (currentDay >= day) {
+            return true;
+          } else {
+            return false;
+          }
+        }
+      }
+    }
   }
 }

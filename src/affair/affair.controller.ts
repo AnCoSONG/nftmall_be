@@ -78,7 +78,12 @@ export class AffairController {
 
   @Post('/pay')
   pay(@Req() req: FastifyRequest, @Body() payDto: PayDto) {
-    return this.affairService.pay(payDto.order_id, req.ip);
+    return this.affairService.pay(payDto.order_id, req.ip, payDto.type, payDto.openid);
+  }
+
+  @Get('/queryPayment')
+  queryPayment(@Query('trade_no') trade_no: string) {
+    return this.affairService.fetch_payment_result(trade_no);
   }
 
   @Post('/paymentCallback')
@@ -88,12 +93,12 @@ export class AffairController {
   ) {
     // 可能会多次收到，如果已完成则直接返回200
     const ciphereRes = await this.affairService.payment_callback(body);
-    if (ciphereRes.code === 0) {
+    if (ciphereRes.code === 0 || ciphereRes.code === 1 || ciphereRes.code === -1) {
       res.status(200).send();
     } else {
       res.status(500).send({
         code: 'FAIL',
-        message: ciphereRes.error,
+        message: ciphereRes.message
       });
     }
   }
