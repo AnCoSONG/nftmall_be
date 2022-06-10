@@ -56,10 +56,10 @@ export class AuthController {
     return data.collector;
   }
 
-  @Get('/testJwt')
+  @Get('/checkSession')
   @UseGuards(JwtGuard)
-  testJwt() {
-    return 'hello, you are online.';
+  checkSession() {
+    return true;
   }
 
   @Post('/logout/')
