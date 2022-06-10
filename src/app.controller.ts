@@ -59,11 +59,9 @@ export class AppController {
     // return this.bsnService.get_accounts();
   }
 
-  @Get('/test4')
-  test4() {
-    return this.bsnService.get_accounts_history(
-      'iaa1u7gdwe54dz5y0gtw275fl558u0x2c9cju9xryz',
-    );
+  @Get('/get_accounts_history')
+  get_accounts_history(@Query('account') account: string) {
+    return this.bsnService.get_accounts_history(account);
   }
 
   @Get('/get_nft_class_detail')

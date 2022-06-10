@@ -341,7 +341,7 @@ export class AffairService {
     );
     if (lucky_member.length === 0) {
       // 无人参加
-      this.logger.warn('No real user participate in draw...');
+      this.logger.warn(`Draw for ${product_id}: No real user participate in draw...`);
       return;
     }
     const saddRes = await this.redis.sadd(

@@ -93,8 +93,10 @@ export class BsnService {
       // console.log('request res.data.data', res.data.data);
       return res.data.data;
     } catch (err) {
+      console.error(err);
       this.logger.error(
-        `${err.response.data.error.code_space} - ${err.response.data.error.code} - ${err.response.data.error.message}`,
+        `${path}-${method} failed: ${err.response.data.error.code_space} - ${err.response.data.error.code} - ${err.response.data.error.message}`,
+        err.stack,
       );
       return err.response.data.error;
     }
