@@ -51,9 +51,13 @@ export class CollectorsController {
     @Query('with_relation', ParseBoolPipe) with_relation: boolean,
     @Query('id') id: string,
     @Query('username') username: string,
-    @Query('phone') phone: string
+    @Query('phone') phone: string,
   ) {
-    return this.collectorsService.list(page, limit, with_relation, { id, username, phone },);
+    return this.collectorsService.list(page, limit, with_relation, {
+      id,
+      username,
+      phone,
+    });
   }
 
   @Get('/:id/collections')
@@ -133,6 +137,14 @@ export class CollectorsController {
     return this.collectorsService.findOne(id, with_relation);
   }
 
+  @Patch('/update')
+  updateBySelf(
+    @CollectorId() id: number,
+    @Body() updateCollectorDto: UpdateCollectorDto,
+  ) {
+    return this.collectorsService.update(id, updateCollectorDto);
+  }
+  
   @Patch(':id')
   @UsePipes(new JoiValidationPipe(UpdateCollectorSchema))
   update(
