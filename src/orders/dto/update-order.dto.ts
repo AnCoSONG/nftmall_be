@@ -16,5 +16,5 @@ export class UpdateOrderDto extends PartialType(CreateOrderDto) {
   pay_method?: SupportPayment;
 
   @ApiProperty({ example: null })
-  out_trade_id?: string;
+  out_payment_id?: string;
 }

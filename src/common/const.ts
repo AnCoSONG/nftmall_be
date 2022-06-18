@@ -81,3 +81,8 @@ export type CallbackData = {
     payer_currency: string;
   }
 }
+
+export enum CollectorRole {
+  normal = 'normal',
+  official = 'official'
+}

@@ -67,7 +67,7 @@ export class AffairProcessor {
     }
     // finished
     if (tx_res.class_id && tx_res.class_id !== '' && tx_res.tx_hash !== '') {
-      this.logger.log('create nft class complete, success tx hash: ' + tx_res.tx_hash);
+      this.logger.log('create nft class complete, success tx hash: ' + tx_res.tx_hash + ' ' + tx_res.timestamp);
       const updateRes = await this.productsService.onChainSuccess(
         job.data.product_id,
         tx_res.class_id,
@@ -184,7 +184,8 @@ export class AffairProcessor {
         tx_res.nft_id,
         job.data.nft_class_id,
         job.data.operation_id,
-        tx_res.tx_hash // 只在成功时才有交易哈希
+        tx_res.tx_hash, // 只在成功时才有交易哈希
+        tx_res.timestamp // 更新为更准确的上链时间
       );
       this.logger.log(
         `[UPDATE NFT ID] update nft id of ${job.data.product_item_id} with ${tx_res.nft_id} complete`,

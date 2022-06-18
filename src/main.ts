@@ -29,7 +29,7 @@ async function bootstrap() {
         origin:
           process.env.NODE_ENV === 'dev'
             ? 'http://localhost:3000'
-            : 'https://www.jinyuanshuzi.com',
+            : ['https://www.jinyuanshuzi.com', 'https://admin-hsxedh93jf4zthd0.jinyuanshuzi.com'],
         credentials: true,
       },
     },

@@ -96,6 +96,7 @@ export type GetTransactionRes = {
   type: string;
   tx_hash: string;
   status: 0 | 1 | 2 | 3;
+  timestamp: string,
   class_id?: string;
   nft_id?: string;
   message?: string;

@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { CreateCollectorDto } from './dto/create-collector.dto';
 import { UpdateCollectorDto } from './dto/update-collector.dto';
 import { Collector } from './entities/collector.entity';
@@ -84,7 +84,12 @@ export class CollectorsService {
     return collector;
   }
 
-  async list(page: number, limit: number, with_relation = false) {
+  async list(
+    page: number,
+    limit: number,
+    with_relation = false,
+    query = { id: '', username: '', phone: '' },
+  ) {
     if (page <= 0 || limit <= 0) {
       throw new requestKeyErrorException(
         'page and limit must be greater than 0',
@@ -92,8 +97,15 @@ export class CollectorsService {
     }
     const [data, total] = await sqlExceptionCatcher(
       this.collectorRepository.findAndCount({
+        where: {
+          id: Like(`%${query.id ? query.id : ''}%`),
+          username: Like(`%${query.username ? query.username : ''}%`),
+          phone: Like(`%${query.phone ? query.phone : ''}%`),
+        },
         order: { update_date: 'DESC' },
-        relations: with_relation ? ['orders', 'collections'] : [],
+        relations: with_relation
+          ? ['orders', 'collections', 'collections.product']
+          : [],
         skip: (page - 1) * limit,
         take: limit,
       }),

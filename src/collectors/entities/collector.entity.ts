@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
+import { CollectorRole } from '../../common/const';
 import { Order } from '../../orders/entities/order.entity';
 import { ProductItem } from '../../product-items/entities/product-item.entity';
 
@@ -43,6 +44,9 @@ export class Collector {
   @Column({ type: 'varchar', length: 255, nullable: true })
   wx_openid?: string;
 
+  @Column({ type: 'enum', enum: CollectorRole, default: CollectorRole.normal })
+  role: CollectorRole;
+
   @OneToMany(() => Order, (order) => order.buyer, {
     cascade: true,
   })
@@ -64,5 +68,4 @@ export class Collector {
 
   @DeleteDateColumn({ type: 'timestamp' })
   delete_date: Date;
-
 }

@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bull';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { BsnService } from '../bsn/bsn.service';
 import { sqlExceptionCatcher } from '../common/utils';
 import { requestKeyErrorException } from '../exceptions';
@@ -35,7 +35,10 @@ export class PublishersService {
     // 上链 -> 创建
     const publisher = this.publisherRepository.create(createPublisherDto);
     const chainRes = await this.bsnService.create_account(`${publisher.name}`);
-    console.log(chainRes);
+    this.logger.log(
+      `account: ${chainRes.account}, name: ${chainRes.name}, operation_id: ${chainRes.operation_id}`,
+    );
+    // console.log(chainRes);
     if (chainRes.code) {
       throw new BadRequestException(chainRes.message);
     } else {
@@ -57,7 +60,13 @@ export class PublishersService {
     );
   }
 
-  async list(page: number, limit: number, with_relation = false) {
+  async list(
+    page: number,
+    limit: number,
+    with_relation = false,
+    id = '',
+    name = '',
+  ) {
     if (page <= 0 || limit <= 0) {
       throw new requestKeyErrorException(
         'page and limit must be greater than 0',
@@ -65,12 +74,29 @@ export class PublishersService {
     }
     const [data, total] = await sqlExceptionCatcher(
       this.publisherRepository.findAndCount({
+        where: {
+          id: Like(`%${id}%`),
+          name: Like(`%${name}%`),
+        },
         relations: with_relation ? ['works'] : [],
         skip: (page - 1) * limit,
         take: limit,
       }),
     );
     return { data, total, page, limit };
+  }
+
+  async query(limit = 50, with_relation = true, name = '') {
+    const [data, total] = await sqlExceptionCatcher(
+      this.publisherRepository.findAndCount({
+        where: {
+          name: Like(`%${name ?? ''}%`),
+        },
+        relations: with_relation ? ['works'] : [],
+        take: limit,
+      }),
+    );
+    return { data, total };
   }
 
   async findOne(id: string) {

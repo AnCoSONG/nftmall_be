@@ -14,7 +14,7 @@ import {
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { onChainStatus, PaymentStatus } from '../common/const';
 import { CollectorId } from '../decorators';
 import { JwtGuard } from '../auth/guards/jwt.guard';
@@ -44,19 +44,42 @@ export class OrdersController {
   // ) {
   //   return this.ordersService.list(page, limit, with_relation, query);
   // }
+  @Get('/query')
+  @ApiQuery({name: 'id', required: false})
+  @ApiQuery({name: 'trade_no', required: false})
+  @ApiQuery({name: 'buyer_id', required: false})
+  query(
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
+    @Query('with_relation', ParseBoolPipe) with_relation: boolean,
+    @Query('id') id: string,
+    @Query('trade_no') trade_no: string,
+    @Query('buyer_id') buyer_id: string,
+  ) {
+    return this.ordersService.query(page, limit, with_relation, id, trade_no, buyer_id);
+  }
   @Get('/list')
   listByCollector(
     @CollectorId() collector_id: number,
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
     @Query('with_relation', ParseBoolPipe) with_relation: boolean,
-    @Query('query') query: 'all' & PaymentStatus & onChainStatus
+    @Query('query') query: 'all' & PaymentStatus & onChainStatus,
   ) {
-    return this.ordersService.list(collector_id, page, limit, with_relation, query);
+    return this.ordersService.list(
+      collector_id,
+      page,
+      limit,
+      with_relation,
+      query,
+    );
   }
 
   @Get('/byTradeNo')
-  findByTradeNo(@Query('trade_no') trade_no: string, @Query('with_relation') with_relation: boolean) {
+  findByTradeNo(
+    @Query('trade_no') trade_no: string,
+    @Query('with_relation') with_relation: boolean,
+  ) {
     return this.ordersService.findByTradeNo(trade_no, with_relation);
   }
 

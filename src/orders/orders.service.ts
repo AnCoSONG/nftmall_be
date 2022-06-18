@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { onChainStatus, PaymentStatus } from '../common/const';
 import { getIdepmotentValue, sqlExceptionCatcher } from '../common/utils';
 import { requestKeyErrorException } from '../exceptions';
@@ -27,10 +27,10 @@ export class OrdersService {
     return await sqlExceptionCatcher(this.orderRepository.save(order));
   }
 
-  async findAll(with_releation?: boolean) {
+  async findAll(with_relation?: boolean) {
     return await sqlExceptionCatcher(
       this.orderRepository.find({
-        relations: with_releation ? ['product_item', 'buyer'] : [],
+        relations: with_relation ? ['product_item', 'buyer'] : [],
       }),
     );
   }
@@ -47,7 +47,7 @@ export class OrdersService {
     );
   }
 
-  async findOne(id: string, with_relation?: boolean, nothrow=false) {
+  async findOne(id: string, with_relation?: boolean, nothrow = false) {
     const order = await sqlExceptionCatcher(
       this.orderRepository.findOne(id, {
         relations: with_relation
@@ -65,11 +65,47 @@ export class OrdersService {
     return order;
   }
 
+  async query(
+    page = 1,
+    limit = 10,
+    with_relation = true,
+    id = '',
+    trade_no = '',
+    buyer_id = '',
+  ) {
+    if (page <= 0 || limit <= 0) {
+      throw new requestKeyErrorException(
+        'page and limit must be greater than 0',
+      );
+    }
+    const [data, total] = await sqlExceptionCatcher(
+      this.orderRepository.findAndCount({
+        order: { update_date: 'DESC' },
+        relations: with_relation
+          ? ['product_item', 'buyer', 'product_item.product']
+          : [],
+        where: {
+          id: Like(`%${id ?? ''}%`),
+          trade_no: Like(`%${trade_no ?? ''}%`),
+          buyer_id: Like(`%${buyer_id ?? ''}%`),
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    );
+    return {
+      data,
+      total,
+      limit,
+      page,
+    };
+  }
+
   async list(
     collector_id: number,
     page: number,
     limit: number,
-    with_releation = false,
+    with_relation = false,
     query: 'all' & onChainStatus & PaymentStatus,
   ) {
     if (page <= 0 || limit <= 0) {
@@ -81,7 +117,7 @@ export class OrdersService {
       const [data, total] = await sqlExceptionCatcher(
         this.orderRepository.findAndCount({
           order: { update_date: 'DESC' },
-          relations: with_releation
+          relations: with_relation
             ? ['product_item', 'buyer', 'product_item.product']
             : [],
           where: {
@@ -106,7 +142,7 @@ export class OrdersService {
       const [data, total] = await sqlExceptionCatcher(
         this.orderRepository.findAndCount({
           order: { update_date: 'DESC' },
-          relations: with_releation
+          relations: with_relation
             ? ['product_item', 'buyer', 'product_item.product']
             : [],
           where: {
@@ -127,7 +163,7 @@ export class OrdersService {
       const [data, total] = await sqlExceptionCatcher(
         this.orderRepository.findAndCount({
           order: { update_date: 'DESC' },
-          relations: with_releation
+          relations: with_relation
             ? ['product_item', 'buyer', 'product_item.product']
             : ['product_item', 'product_item.product'],
           where: {
@@ -160,13 +196,13 @@ export class OrdersService {
   async paid(
     id: string,
     pay_timestamp: Date,
-    out_trade_id: string,
+    out_payment_id: string,
     gen_credit: number,
   ) {
     return await this.update(id, {
       payment_status: PaymentStatus.PAID,
       pay_timestamp: pay_timestamp,
-      out_trade_id,
+      out_payment_id,
       gen_credit,
     });
   }

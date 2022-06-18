@@ -26,4 +26,7 @@ export class UpdateProductDto extends PartialType(CreateProductDto) {
 
   @ApiProperty({ description: '交易哈希' })
   tx_hash?: string;
+
+  @ApiProperty({ description: '用户可见性' })
+  visible?: boolean;
 }

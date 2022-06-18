@@ -15,7 +15,7 @@ import { BsnService } from '../bsn/bsn.service';
 import { CollectorsService } from '../collectors/collectors.service';
 import { Collector } from '../collectors/entities/collector.entity';
 import { CallbackData, onChainStatus, PaymentStatus } from '../common/const';
-import { sqlExceptionCatcher } from '../common/utils';
+import { redisExceptionCatcher, sqlExceptionCatcher } from '../common/utils';
 import { DayjsService } from '../lib/dayjs/dayjs.service';
 import { WXPAY_SYMBOL } from '../lib/wxpay.provider';
 import { Order } from '../orders/entities/order.entity';
@@ -80,6 +80,7 @@ export class AffairService {
     // * seckill:stock:<product_id> 记录库存
     // * seckill:items:<product_id> 记录藏品序号
     // * seckill:sale_timestamp:<product_id> 记录开售时间
+    // * 抽签&抽签后生成
     // * seckill:drawset:<product_id> 记录抽签集合
     // * seckill:luckyset:<product_id> 通过srandmember得到
     await Promise.all([
@@ -104,7 +105,7 @@ export class AffairService {
       // this.redis.sadd(`seckill:luckyset:${createProductRes.id}`, -1),
     ]);
 
-    // 抽签结束回调，生成lucky set供购买时检查
+    //* 抽签结束回调，生成lucky set供购买时检查
     this.schedulerRegistry.addTimeout(
       `seckill:drawend:${createProductRes.id}`,
       setTimeout(async () => {
@@ -124,29 +125,6 @@ export class AffairService {
         }
       }, this.dayjsService.dayjsify(createProductRes.draw_end_timestamp).valueOf() - this.dayjsService.dayjsify().valueOf()),
     );
-
-    //* 生成假数据
-    //! 后期去掉！
-    // this.schedulerRegistry.addTimeout(
-    //   `seckill:draw:${createProductRes.id}`,
-    //   setTimeout(async () => {
-    //     await Promise.all([
-    //       this.participate_draw(1, createProductRes.id),
-    //       this.participate_draw(2, createProductRes.id),
-    //       this.participate_draw(3, createProductRes.id),
-    //     ]);
-    //     this.logger.log('Fake data generated');
-    //     try {
-    //       this.schedulerRegistry.deleteTimeout(
-    //         `seckill:draw:${createProductRes.id}`,
-    //       );
-    //     } catch (e) {
-    //       this.logger.error(
-    //         `seckill:draw:${createProductRes.id} not found: ${e}`,
-    //       );
-    //     }
-    //   }, this.dayjsService.dayjsify(createProductRes.draw_timestamp) - this.dayjsService.dayjsify()),
-    // );
 
     return {
       operation_id: create_nft_class_id_operation_id,
@@ -210,10 +188,11 @@ export class AffairService {
       {
         delay: 3000,
         backoff: {
+          // 3, 6, 12, 24, 48, 96, 192 ...
           type: 'exponential',
-          delay: 4000,
+          delay: 3000,
         },
-        attempts: 10,
+        attempts: 30,
         timeout: 30000,
         // removeOnComplete: true,
       },
@@ -874,5 +853,13 @@ export class AffairService {
     } else {
       throw new InternalServerErrorException(error);
     }
+  }
+
+  async is_lucky_set_gen(product_id: string) {
+    return await redisExceptionCatcher(this.redis.exists(`seckill:luckyset:${product_id}`))
+  }
+
+  async get_draw_set_count(product_id: string) {
+    return await redisExceptionCatcher(this.redis.scard(`seckill:drawset:${product_id}`))
   }
 }

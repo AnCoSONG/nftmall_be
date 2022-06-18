@@ -10,11 +10,14 @@ import {
   Query,
   ParseUUIDPipe,
   ParseBoolPipe,
+  ParseArrayPipe,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { onChainStatus, SupportType } from '../common/const';
+import { string } from 'joi';
 
 @ApiTags('藏品系列')
 @Controller('products')
@@ -33,18 +36,52 @@ export class ProductsController {
     return this.productsService.findAll();
   }
 
+  @Get('/query')
+  listWithQuery(
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
+    @Query('with_relation', ParseBoolPipe) with_relation: boolean,
+    @Query('id') id: string,
+    @Query('name') name: string,
+    @Query('types', new ParseArrayPipe({ items: String })) types: string[],
+    @Query('on_chain_statuses', new ParseArrayPipe({ items: String }))
+    on_chain_statuses: string[],
+  ) {
+    // console.log('/query', page, limit, with_relation, id, name, types, on_chain_statuses)
+    return this.productsService.query(
+      page,
+      limit,
+      with_relation,
+      id,
+      name,
+      types,
+      on_chain_statuses,
+    );
+  }
+
   @Get('/list')
   list(
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
-    @Query('with_relation', ParseBoolPipe) with_relation?: boolean,
+    @Query('with_relation', ParseBoolPipe) with_relation: boolean,
+    @Query('scope') scope: string
   ) {
-    return this.productsService.list(page, limit, with_relation);
+    return this.productsService.list(
+      page,
+      limit,
+      with_relation,
+      scope
+    );
   }
 
   @Get('/get_stock_count')
   get_stock_count(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.get_stock_count(id);
+  }
+
+  @Patch('/setVisibility/:product_id')
+  setVisibility(@Param('product_id') product_id: string, @Query('visibility', ParseBoolPipe) visibility: boolean) {
+    return this.productsService.setVisibility(product_id, visibility)
   }
 
   // // 上链

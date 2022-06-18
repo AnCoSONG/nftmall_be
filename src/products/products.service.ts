@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { string } from 'joi';
-import { Repository } from 'typeorm';
+import { In, Like, Repository } from 'typeorm';
 import { BsnService } from '../bsn/bsn.service';
 import { onChainStatus } from '../common/const';
 import { sqlExceptionCatcher } from '../common/utils';
@@ -19,7 +19,7 @@ import { Product } from './entities/product.entity';
 
 @Injectable()
 export class ProductsService {
-  private readonly logger = new Logger(ProductsService.name)
+  private readonly logger = new Logger(ProductsService.name);
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
@@ -85,14 +85,63 @@ export class ProductsService {
   }
 
   // cache last total and compare to page
-  async list(page: number, limit: number, with_relation = false) {
+  async query(
+    page: number,
+    limit: number,
+    with_relation = false,
+    id = '',
+    name = '',
+    types = [],
+    on_chain_statuses = [],
+  ) {
     if (page <= 0 || limit <= 0) {
       throw new requestKeyErrorException(
         'page and limit must be greater than 0',
       );
     }
+
     const [data, total] = await sqlExceptionCatcher(
       this.productRepository.findAndCount({
+        where: {
+          id: Like(`%${id ?? ''}%`),
+          name: Like(`%${name ?? ''}%`),
+          type: In(types),
+          on_chain_status: In(on_chain_statuses),
+        },
+        order: { update_date: 'DESC' },
+        relations: with_relation ? ['genres', 'publisher'] : [],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    );
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async list(
+    page: number,
+    limit: number,
+    with_relation = false,
+    scope = 'user',
+  ) {
+    if (page <= 0 || limit <= 0) {
+      throw new requestKeyErrorException(
+        'page and limit must be greater than 0',
+      );
+    }
+    const visibleCondition = [true];
+    if (scope === 'all') {
+      visibleCondition.push(false); // 可以看到全部
+    }
+    const [data, total] = await sqlExceptionCatcher(
+      this.productRepository.findAndCount({
+        where: {
+          visible: In(visibleCondition),
+        },
         order: { update_date: 'DESC' },
         relations: with_relation ? ['genres', 'publisher'] : [],
         skip: (page - 1) * limit,
@@ -122,7 +171,7 @@ export class ProductsService {
   async onChainFail(id: string, operation_id: string) {
     return await this.update(id, {
       on_chain_status: onChainStatus.FAILED,
-      operation_id
+      operation_id,
     });
   }
 
@@ -137,11 +186,11 @@ export class ProductsService {
     return await this.update(id, {
       on_chain_status: onChainStatus.PENDING,
       operation_id: operation_id,
-    })
+    });
   }
 
-  async onChainSuccess(id: string, nft_class_id: string, tx_hash:string) {
-    this.logger.log(`[ON CHAIN SUCCESS] ${nft_class_id} ${tx_hash}`)
+  async onChainSuccess(id: string, nft_class_id: string, tx_hash: string) {
+    this.logger.log(`[ON CHAIN SUCCESS] ${nft_class_id} ${tx_hash}`);
     return await this.update(id, {
       nft_class_id,
       on_chain_status: onChainStatus.SUCCESS,
@@ -155,10 +204,25 @@ export class ProductsService {
     );
   }
 
+  async setVisibility(id: string, visibility: boolean) {
+    return await this.update(id, { visible: visibility });
+  }
+
   async add_stock(id: string, count: number) {
     const product = (await this.findOne(id)) as Product;
-    const updateRes = await this.update(id, { publish_count: product.publish_count + count, stock_count: product.stock_count + count})
+    const updateRes = await this.update(id, {
+      publish_count: product.publish_count + count,
+      stock_count: product.stock_count + count,
+    });
     return updateRes;
+  }
+
+  async make_visible(id: string) {
+    const product = (await this.findOne(id)) as Product;
+    const res = await this.update(id, {
+      visible: true,
+    });
+    return res;
   }
 
   async update(id: string, updateProductDto: UpdateProductDto) {

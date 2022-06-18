@@ -49,8 +49,11 @@ export class CollectorsController {
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
     @Query('with_relation', ParseBoolPipe) with_relation: boolean,
+    @Query('id') id: string,
+    @Query('username') username: string,
+    @Query('phone') phone: string
   ) {
-    return this.collectorsService.list(page, limit, with_relation);
+    return this.collectorsService.list(page, limit, with_relation, { id, username, phone },);
   }
 
   @Get('/:id/collections')
@@ -78,10 +81,8 @@ export class CollectorsController {
   }
 
   @Get('/byUsername')
-  findByUsername(
-    @Query('username') username: string,
-  ) {
-    return this.collectorsService.findByUsername(username)
+  findByUsername(@Query('username') username: string) {
+    return this.collectorsService.findByUsername(username);
   }
 
   @Post('/idcheck')
@@ -117,8 +118,11 @@ export class CollectorsController {
   }
 
   @Post('/addCredit')
-  addCredit(@Query('id',ParseIntPipe) id: number, @Query('credit', ParseIntPipe) credit: number) {
-    return this.collectorsService.addCredit(id, credit)
+  addCredit(
+    @Query('id', ParseIntPipe) id: number,
+    @Query('credit', ParseIntPipe) credit: number,
+  ) {
+    return this.collectorsService.addCredit(id, credit);
   }
 
   @Get(':id')

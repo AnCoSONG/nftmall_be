@@ -43,8 +43,15 @@ export class PublishersController {
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
     @Query('with_relation', ParseBoolPipe) with_relation: boolean,
+    @Query('id') id: string,
+    @Query('name') name: string
   ) {
-    return this.publishersService.list(page, limit, with_relation);
+    return this.publishersService.list(page, limit, with_relation, id, name);
+  }
+
+  @Get('/query')
+  query(@Query('limit', ParseIntPipe) limit: number, @Query('with_relation', ParseBoolPipe) with_relation: boolean, @Query('name') name: string) {
+    return this.publishersService.query(limit, with_relation, name)
   }
 
   @Get(':id')

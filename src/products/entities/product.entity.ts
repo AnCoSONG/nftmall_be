@@ -63,6 +63,9 @@ export class Product {
   @Column({ type: 'tinyint', unsigned: true })
   limit: number; // 限购数量
 
+  @Column({type: 'bool', default: false })
+  visible: boolean;
+
   @VersionColumn({ type: 'smallint', unsigned: true })
   version: number;
 

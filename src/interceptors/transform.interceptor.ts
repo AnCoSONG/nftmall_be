@@ -32,7 +32,7 @@ export class TransformInterceptor implements NestInterceptor {
             path: '/',
           });
           res.cookie('xc', req['user'].data.access_token, {
-            maxAge: 1000 * 60 * 60 * 24 * 2, // 2 day ... larger than redis expire time
+            maxAge: 1000 * 60 * 60 * 24 * 15, // same with refresh token
             httpOnly: true,
             secure: true,
             path: '/',

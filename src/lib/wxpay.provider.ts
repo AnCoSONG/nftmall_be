@@ -1,5 +1,5 @@
 import { Provider } from '@nestjs/common';
-import WxPay from 'wechatpay-node-v3';
+import WxPay = require('wechatpay-node-v3');
 import { readFileSync } from 'fs';
 import { ConfigService } from '@nestjs/config';
 import { join } from 'path';

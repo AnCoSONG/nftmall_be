@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -46,8 +47,8 @@ export class AffairController {
   }
 
   //! remove in prod
-  @Post('destory')
-  destory(@Query('product_id') product_id: string) {
+  @Delete('destory/:product_id')
+  destory(@Param('product_id') product_id: string) {
     //! danger method, delete a product and all cache related to it
     return this.affairService.destory(product_id);
   }
@@ -103,13 +104,13 @@ export class AffairController {
     }
   }
 
-  @Post('/manual_createNftForProductItem')
-  create_nft_for_product_item(@Query('order_id') order_id: string) {
+  @Post('/manual_createNftForProductItem/:order_id')
+  create_nft_for_product_item(@Param('order_id') order_id: string) {
     return this.affairService.create_nft_for_product_item(order_id);
   }
 
-  @Post('/manual_createNftClassForProduct')
-  create_nft_class_for_product(@Query('product_id') product_id: string) {
+  @Post('/manual_createNftClassForProduct/:product_id')
+  create_nft_class_for_product(@Param('product_id') product_id: string) {
     return this.affairService.create_nft_class_id_for_product(product_id);
   }
 
@@ -119,6 +120,16 @@ export class AffairController {
       throw new BadRequestException(`count cannot less than 1`)
     }
     return this.affairService.genLuckySet(product_id, count);
+  }
+
+  @Get('/isLuckySetGen')
+  is_lucky_set_gen(@Query('product_id') product_id: string) {
+    return this.affairService.is_lucky_set_gen(product_id);
+  }
+
+  @Get('/getDrawSetCount')
+  get_lucky_set_count(@Query('product_id') product_id: string) {
+    return this.affairService.get_draw_set_count(product_id)
   }
 
   @Post('/sim_paymentComplete')
