@@ -59,7 +59,7 @@ export class CollectorsService {
 
   async findByUsername(username: string) {
     return await sqlExceptionCatcher(
-      this.collectorRepository.count({
+      this.collectorRepository.find({
         where: { username },
       }),
     );

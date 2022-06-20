@@ -99,7 +99,7 @@ export class AuthService {
     }
     // 拿到用户信息
     const collector = data.length === 1 ? data[0] : newCollector;
-    this.logger.log('拿到用户信息', collector);
+    this.logger.log('拿到用户信息');
     // 1. 生成access_token & refresh_token
     const access_token = this.jwtService.sign({
       id: collector.id,

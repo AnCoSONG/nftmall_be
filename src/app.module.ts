@@ -29,6 +29,7 @@ import Redis, { Callback, Result } from 'ioredis';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from 'nestjs-throttler-storage-redis';
 import { AliModule } from './ali/ali.module';
+import { DocumentsModule } from './documents/documents.module';
 
 declare module 'ioredis' {
   interface RedisCommander<Context> {
@@ -141,6 +142,7 @@ declare module 'ioredis' {
     AffairModule,
     ScheduleModule.forRoot(),
     AliModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

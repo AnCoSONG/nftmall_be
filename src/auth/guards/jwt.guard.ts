@@ -2,6 +2,7 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { FastifyRequest } from 'fastify';
@@ -14,6 +15,7 @@ import { AuthError } from '../../common/const';
 
 @Injectable()
 export class JwtGuard implements CanActivate {
+  private readonly logger = new Logger(JwtGuard.name)
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
@@ -29,53 +31,62 @@ export class JwtGuard implements CanActivate {
     //   throw new UnauthorizedException('csrf token not found');
     // }
     if (!request.cookies['xc']) {
+      this.logger.debug('access token not found')
       throw new UnauthorizedException('access token not found');
     }
     if (!request.cookies['tt']) {
+      this.logger.debug('refresh token not found')
       throw new UnauthorizedException('refresh token not found');
     }
     const access_token = request.cookies['xc'];
     const refresh_token = request.cookies['tt'];
+    const decoded = this.authService.jwtDecode(refresh_token) as {
+      id: number | string;
+      username: string;
+      phone: string;
+    };
+    const id = decoded['id'];
     // access token是否过期
     const access_verify_res = this.authService.jwtVerify(access_token, {
       secret: this.configService.get('JWT_SECRET'),
       ignoreExpiration: false,
     });
     if (access_verify_res === AuthError.OK) {
+      // todo: 完善debug代码
+      this.logger.debug(`user ${id} auth: access token ok!`)
       request['user'] = {
         code: AuthError.OK,
       };
       return true;
     } else if (access_verify_res === AuthError.OUTDATED) {
       // * 检查refresh token是否过期
+      this.logger.debug(`user ${id} auth: access token outdated!`)
       const refresh_verify_res = this.authService.jwtVerify(refresh_token, {
         secret: this.configService.get('JWT_REFRESH_SECRET'),
         ignoreExpiration: false,
       });
       if (refresh_verify_res === AuthError.OUTDATED) {
         // * refresh token过期，需要重新登录
+        this.logger.debug(`user ${id} auth: refresh token outdated!`)
         throw new UnauthorizedException('refresh token expired');
       } else if (refresh_verify_res === AuthError.OK) {
         // * 检查refresh_token是否下线
-        const decoded = this.authService.jwtDecode(access_token) as {
-          id: number | string;
-          username: string;
-          phone: string;
-        };
-        const id = decoded['id'];
         const cached = await redisExceptionCatcher(
           this.redis.get(`token_${id}`),
         );
         if (!cached) {
           // 已下线
+          this.logger.debug(`user ${id} auth: refresh token cache missed!`)
           throw new UnauthorizedException('offline');
         }
         if (cached !== refresh_token) {
           // 检测到不匹配
+          this.logger.debug(`user ${id} auth: refresh token cache mismatched!`)
           await redisExceptionCatcher(this.redis.del(`token_${id}`)); // 自动下线
           throw new UnauthorizedException('token mismatch');
         }
         // * 刷新access token的同时更新refresh_token
+        this.logger.debug(`user ${id} auth: refresh and ok!`)
         const new_access_token = this.authService.jwtSign(
           {
             id: decoded.id,
@@ -132,9 +143,11 @@ export class JwtGuard implements CanActivate {
         // });
         return true;
       } else {
+        this.logger.debug(`user ${id} auth: refresh token error: ${refresh_verify_res}`)
         throw new UnauthorizedException('refresh token invalid');
       }
     } else {
+      this.logger.debug(`user ${id} auth: access token error: ${access_verify_res}`)
       throw new UnauthorizedException('access token invalid');
     }
   }
