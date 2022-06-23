@@ -94,6 +94,11 @@ export class AuthController {
     return await this.authService.fetchOpenid(encrypt_code);
   }
 
+  @Get('/fetchSignature')
+  async fetchJsTicket(@Query('url') url: string) {
+    return await this.authService.fetchSignature(url)
+  }
+
   //   @Post('/refresh')
   //   async refresh(
   //     @Req() req: FastifyRequest,

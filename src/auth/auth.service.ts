@@ -9,7 +9,7 @@ import {
 import { JwtService, JwtVerifyOptions, JwtSignOptions } from '@nestjs/jwt';
 import Redis from 'ioredis';
 import { CollectorsService } from '../collectors/collectors.service';
-import { redisExceptionCatcher, sqlExceptionCatcher } from '../common/utils';
+import { getIdepmotentValue, redisExceptionCatcher, sqlExceptionCatcher } from '../common/utils';
 import { LoginDto } from './dto/login.dto';
 import { SendCodeDto } from './dto/send-code.dto';
 import { ConfigService } from '@nestjs/config';
@@ -214,7 +214,7 @@ export class AuthService {
       },
       {
         secret: this.configService.get('jwt.refresh_secret'),
-        expiresIn: '14d',
+        expiresIn: this.configService.get('jwt.refresh_expires_in'),
       },
     );
     // 5. 设置refresh_token到redis
@@ -223,7 +223,7 @@ export class AuthService {
         refresh_token_new,
         1,
         'EX',
-        14 * 24 * 60 * 60, // 14天过期
+        15 * 24 * 60 * 60, // 14天过期
       ),
     );
     return {
@@ -261,6 +261,56 @@ export class AuthService {
       );
     } else {
       return fetchRes.data.openid;
+    }
+  }
+
+  async fetchSignature(url: string) {
+    // 获取ticket
+    let jsapi_ticket = await this.redis.get('jsapi_ticket')
+    if (!jsapi_ticket) {
+      // 获取access token
+      let access_token = await this.redis.get('access_token')
+      if (!access_token) {
+        const res1 = await this.httpService.get<{access_token: string, expires_in: number, errcode: number, errmsg: string}>('https://api.weixin.qq.com/cgi-bin/token', {
+          params: {
+            grant_type: 'client_credential',
+            appid: this.configService.get('wxpay.appid'),
+            secret: this.configService.get('wxpay.appsecret')
+          }
+        }).toPromise()
+        if (res1.data.access_token) {
+          access_token = res1.data.access_token
+          this.redis.set('access_token', access_token, 'EX', res1.data.expires_in)
+        } else {
+          throw new InternalServerErrorException('请求微信接口出错: Access Token')
+        }
+      }
+      const res2 = await this.httpService.get<{errcode: number, errmsg: string, ticket: string, expires_in: number}>(
+        'https://api.weixin.qq.com/cgi-bin/ticket/getticket', {
+          params: {
+            access_token,
+            type: 'jsapi'
+          }
+        }
+      ).toPromise()
+      if (res2.data.ticket) {
+        jsapi_ticket = res2.data.ticket
+        this.redis.set('jsapi_ticket', jsapi_ticket, 'EX', res2.data.expires_in)
+      } else {
+        throw new InternalServerErrorException('请求微信接口出错: Jsapi Ticket')
+      }
+    }
+    const noncestr = getIdepmotentValue()
+    const timestamp = Math.round(Date.now() / 1000)
+    
+    const concatenate_str = `jsapi_ticket=${jsapi_ticket}&noncestr=${noncestr}&timestamp=${timestamp}&url=${url}`
+    this.logger.debug(`concatenate_str: ${concatenate_str}`)
+    const signature = this.cryptoJsService.sha1(concatenate_str)
+    return {
+      signature,
+      timestamp,
+      nonceStr: noncestr,
+      appId: this.configService.get('wxpay.appid')
     }
   }
 }

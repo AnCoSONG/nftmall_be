@@ -29,4 +29,5 @@ export const CreateProductSchema = Joi.object({
     )
     .allow(null),
   sale_timestamp: Joi.date().required(),
+  attribute: Joi.string().valid('normal', 'gift').required()
 });

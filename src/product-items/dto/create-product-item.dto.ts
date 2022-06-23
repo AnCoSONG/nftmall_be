@@ -6,4 +6,7 @@ export class CreateProductItemDto {
 
   @ApiProperty({ example: 999 })
   no: number;
+
+  @ApiProperty({example: null })
+  owner_id?: number;
 }

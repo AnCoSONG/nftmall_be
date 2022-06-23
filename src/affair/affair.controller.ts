@@ -21,6 +21,7 @@ import { AffairService } from './affair.service';
 import { DrawDto, PayDto, SeckillDto, WxCallbackDto } from './common.dto';
 import { CollectorId } from '../decorators';
 import { JwtGuard } from '../auth/guards/jwt.guard';
+import { IncrementProductDto } from '../products/dto/increment-product.dto';
 
 @ApiTags('事务')
 @Controller('affair')
@@ -28,7 +29,7 @@ export class AffairController {
   constructor(private readonly affairService: AffairService) {}
 
   // 发布藏品, <谁>发布一个<什么>产品
-  @Post('/:publisher_id/publish')
+  @Post('/publish/:publisher_id')
   publish(
     @Param('publisher_id') publisher_id: string,
     @Body() createProductDto: CreateProductDto,
@@ -36,10 +37,33 @@ export class AffairController {
     return this.affairService.publish(publisher_id, createProductDto);
   }
 
-  @Post('/addStock/:product_id')
-  addStock(@Param('product_id') product_id: string, @Query('add_count', ParseIntPipe) add_count: number) {
-    return this.affairService.add_stock(product_id, +add_count);
+  @Post('/increment/:product_id')
+  increment_publish(
+    @Param('product_id') product_id: string,
+    @Body() incrementProductDto: IncrementProductDto,
+  ) {
+    return this.affairService.incremental_publish(
+      product_id,
+      incrementProductDto.count,
+      incrementProductDto.published_count,
+      incrementProductDto.draw_timestamp,
+      incrementProductDto.draw_end_timestamp,
+      incrementProductDto.sale_timestamp,
+    );
   }
+
+  @Post('/sendGift/:product_id')
+  sendGift(@Param('product_id') product_id: string, @Query('collector_id', ParseIntPipe) collector_id: number) {
+    return this.affairService.send_product_item_to_collector(product_id, collector_id)
+  }
+
+  // @Post('/addStock/:product_id')
+  // addStock(
+  //   @Param('product_id') product_id: string,
+  //   @Query('add_count', ParseIntPipe) add_count: number,
+  // ) {
+  //   return this.affairService.add_stock(product_id, +add_count);
+  // }
 
   @Post('/syncStock/:product_id')
   syncStock(@Param('product_id') product_id: string) {
@@ -61,10 +85,7 @@ export class AffairController {
   @Post('/seckill')
   @UseGuards(JwtGuard)
   seckill(@CollectorId() collector_id: number, @Body() seckillDto: SeckillDto) {
-    return this.affairService.seckill(
-      collector_id,
-      seckillDto.product_id,
-    );
+    return this.affairService.seckill(collector_id, seckillDto.product_id);
   }
 
   @Post('/draw')
@@ -79,7 +100,12 @@ export class AffairController {
 
   @Post('/pay')
   pay(@Req() req: FastifyRequest, @Body() payDto: PayDto) {
-    return this.affairService.pay(payDto.order_id, req.ip, payDto.type, payDto.openid);
+    return this.affairService.pay(
+      payDto.order_id,
+      req.ip,
+      payDto.type,
+      payDto.openid,
+    );
   }
 
   @Get('/queryPayment')
@@ -94,12 +120,16 @@ export class AffairController {
   ) {
     // 可能会多次收到，如果已完成则直接返回200
     const ciphereRes = await this.affairService.payment_callback(body);
-    if (ciphereRes.code === 0 || ciphereRes.code === 1 || ciphereRes.code === -1) {
+    if (
+      ciphereRes.code === 0 ||
+      ciphereRes.code === 1 ||
+      ciphereRes.code === -1
+    ) {
       res.status(200).send();
     } else {
       res.status(500).send({
         code: 'FAIL',
-        message: ciphereRes.message
+        message: ciphereRes.message,
       });
     }
   }
@@ -115,9 +145,12 @@ export class AffairController {
   }
 
   @Post('/manual_genLuckySet')
-  gen_lucky_set(@Query('product_id') product_id: string, @Query('count', ParseIntPipe) count: number) {
+  gen_lucky_set(
+    @Query('product_id') product_id: string,
+    @Query('count', ParseIntPipe) count: number,
+  ) {
     if (count <= 0) {
-      throw new BadRequestException(`count cannot less than 1`)
+      throw new BadRequestException(`count cannot less than 1`);
     }
     return this.affairService.genLuckySet(product_id, count);
   }
@@ -129,7 +162,7 @@ export class AffairController {
 
   @Get('/getDrawSetCount')
   get_lucky_set_count(@Query('product_id') product_id: string) {
-    return this.affairService.get_draw_set_count(product_id)
+    return this.affairService.get_draw_set_count(product_id);
   }
 
   @Post('/sim_paymentComplete')

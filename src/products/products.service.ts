@@ -142,7 +142,7 @@ export class ProductsService {
         where: {
           visible: In(visibleCondition),
         },
-        order: { update_date: 'DESC' },
+        order: { create_date: 'DESC' }, // todo: 更好的排序
         relations: with_relation ? ['genres', 'publisher'] : [],
         skip: (page - 1) * limit,
         take: limit,
@@ -165,7 +165,7 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
-    return product;
+    return product as Product;
   }
 
   async onChainFail(id: string, operation_id: string) {

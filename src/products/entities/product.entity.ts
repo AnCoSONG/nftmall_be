@@ -12,7 +12,7 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
-import { onChainStatus, SupportType, Tag } from '../../common/const';
+import { onChainStatus, ProductAttribute, SupportType, Tag } from '../../common/const';
 import { Genre } from '../../genres/entities/genre.entity';
 import { ProductItem } from '../../product-items/entities/product-item.entity';
 import { Publisher } from '../../publishers/entities/publisher.entity';
@@ -37,6 +37,9 @@ export class Product {
   @Column()
   src: string; // 藏品实际资源 图像？音频？视频？3D模型本体
   // will show in the product page
+
+  @Column()
+  poster: string;
 
   @Column({
     type: 'enum',
@@ -65,6 +68,9 @@ export class Product {
 
   @Column({type: 'bool', default: false })
   visible: boolean;
+
+  @Column({type: 'enum', enum: ProductAttribute, default: ProductAttribute.normal})
+  attribute: ProductAttribute;
 
   @VersionColumn({ type: 'smallint', unsigned: true })
   version: number;

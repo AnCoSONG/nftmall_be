@@ -81,7 +81,7 @@ export class CollectorsService {
     } else {
       collector['is_verified'] = false;
     }
-    return collector;
+    return collector as Collector;
   }
 
   async list(

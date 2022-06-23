@@ -14,7 +14,7 @@ import Redis from 'ioredis';
 import { BsnService } from '../bsn/bsn.service';
 import { CollectorsService } from '../collectors/collectors.service';
 import { Collector } from '../collectors/entities/collector.entity';
-import { CallbackData, onChainStatus, PaymentStatus } from '../common/const';
+import { CallbackData, onChainStatus, PaymentStatus, ProductAttribute } from '../common/const';
 import { redisExceptionCatcher, sqlExceptionCatcher } from '../common/utils';
 import { DayjsService } from '../lib/dayjs/dayjs.service';
 import { WXPAY_SYMBOL } from '../lib/wxpay.provider';
@@ -48,8 +48,68 @@ export class AffairService {
     @InjectRedis() private readonly redis: Redis,
     @Inject(WXPAY_SYMBOL) private readonly wxpay: WXPAY,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    // todo 初始化scheduler 载入待完成的
+  }
 
+  /**
+   * 内部方法：完成redist设置
+   * @param product_id 藏品系列ID
+   * @param publish_count 发行量
+   * @param published_count 已发行量，如果没有则填0，否则应该填至今为止全部的发行量
+   */
+  async __publish_setup_redis(product_id: string, publish_count: number, published_count = 0) {
+    // * 创建redis抢购所需数据类型
+    // * seckill:stock:<product_id> 记录库存
+    // * seckill:items:<product_id> 记录藏品序号
+    // * 抽签&抽签后生成
+    // * seckill:drawset:<product_id> 记录抽签集合
+    // * seckill:luckyset:<product_id> 通过srandmember得到
+    const redisSetupRes = await Promise.all([
+      this.redis.set(
+        `seckill:stock:${product_id}`,
+        publish_count,
+      ),
+      this.redis.sadd(
+        `seckill:items:${product_id}`,
+        new Array(publish_count)
+          .fill(0)
+          .map((item, index) => index + 1 + published_count),
+      )
+    ]);
+    return redisSetupRes
+  }
+
+  __publish_setup_draw_end_timeout(product_id: string, draw_count: number, draw_end_timestamp: string | Date) {
+    // todo: 服务重启后也应能正确完成
+    this.schedulerRegistry.addTimeout(
+      `seckill:drawend:${product_id}`,
+      setTimeout(async () => {
+        // console.log(createProductRes.id, createProductRes.publish_count);
+        await this.genLuckySet(
+          product_id,
+          draw_count, // todo: 抽到的要比实际发售的多，这里设置为2倍
+        );
+        try {
+          this.schedulerRegistry.deleteTimeout(
+            `seckill:drawend:${product_id}`,
+          );
+        } catch (e) {
+          this.logger.warn(
+            `seckill:drawend:${product_id} not found: ${e}`,
+          );
+        }
+      }, this.dayjsService.dayjsify(draw_end_timestamp).valueOf() - this.dayjsService.dayjsify().valueOf()),
+    );
+  }
+
+  /**
+   * ! 发布藏品
+   * 
+   * @param publisher_id 创作者
+   * @param createProductDto
+   * @returns
+   */
   async publish(publisher_id: string, createProductDto: CreateProductDto) {
     //* 检查是否存在该id
     const publisher = await sqlExceptionCatcher(
@@ -57,6 +117,13 @@ export class AffairService {
     );
     //* 创建一个product
     createProductDto.publisher_id = publisher.id;
+    if (createProductDto.attribute === ProductAttribute.gift) {
+      // 赠品初始化为1亿份，保证绝对够用
+      // todo 是否更改为根据publish_count定制
+      createProductDto.publish_count = 100000000
+      createProductDto.stock_count = 100000000
+      createProductDto.limit = 0
+    }
     const createProductRes = await this.productsService.create(
       createProductDto,
     );
@@ -76,59 +143,99 @@ export class AffairService {
     //     delay: 3000,
     //   },
     // );
-    // * 创建redis抢购所需数据类型
-    // * seckill:stock:<product_id> 记录库存
-    // * seckill:items:<product_id> 记录藏品序号
-    // * seckill:sale_timestamp:<product_id> 记录开售时间
-    // * 抽签&抽签后生成
-    // * seckill:drawset:<product_id> 记录抽签集合
-    // * seckill:luckyset:<product_id> 通过srandmember得到
-    await Promise.all([
-      this.redis.set(
-        `seckill:stock:${createProductRes.id}`,
-        createProductRes.publish_count,
-      ),
-      this.redis.sadd(
-        `seckill:items:${createProductRes.id}`,
-        new Array(createProductRes.publish_count)
-          .fill(0)
-          .map((item, index) => index + 1),
-      ),
-      this.redis.set(
-        `seckill:sale_timestamp:${createProductRes.id}`,
-        createProductRes.sale_timestamp.valueOf(),
-      ),
-      // // 初始化抽签表
-      // this.redis.sadd(`seckill:drawset:${createProductRes.id}`, -1),
-      // // 初始化中签表
-      //! luckyset不存在前端方便判断当前系统状况
-      // this.redis.sadd(`seckill:luckyset:${createProductRes.id}`, -1),
-    ]);
+    if (createProductRes.attribute === ProductAttribute.normal) {
+      // * 可购买的
+      // * 设置redis
+      await this.__publish_setup_redis(createProductRes.id, createProductRes.publish_count)
+  
+      // * 抽签结束时生成lucky set
+      this.__publish_setup_draw_end_timeout(createProductRes.id, createProductRes.publish_count * 2, createProductRes.draw_end_timestamp)
+  
+      return {
+        operation_id: create_nft_class_id_operation_id,
+        id: createProductRes.id
+      };
+    } else if (createProductRes.attribute === ProductAttribute.gift) {
+      // * 赠品 redis设置库存，用于原子增减
+      await this.redis.set(`gift:stock:${createProductRes.id}`, createProductRes.publish_count)
+      return {
+        id: createProductRes.id
+      }
+    } else {
+      throw new BadRequestException('不支持的藏品属性')
+    }
+  }
 
-    //* 抽签结束回调，生成lucky set供购买时检查
-    this.schedulerRegistry.addTimeout(
-      `seckill:drawend:${createProductRes.id}`,
-      setTimeout(async () => {
-        // console.log(createProductRes.id, createProductRes.publish_count);
-        await this.genLuckySet(
-          createProductRes.id,
-          createProductRes.publish_count * 2, // todo: 抽到的要比实际发售的多，这里设置为2倍
-        );
-        try {
-          this.schedulerRegistry.deleteTimeout(
-            `seckill:drawend:${createProductRes.id}`,
-          );
-        } catch (e) {
-          this.logger.warn(
-            `seckill:drawend:${createProductRes.id} not found: ${e}`,
-          );
-        }
-      }, this.dayjsService.dayjsify(createProductRes.draw_end_timestamp).valueOf() - this.dayjsService.dayjsify().valueOf()),
-    );
+  /**
+   * 增量发布，继承 product_id 的 全部属性
+   * 必须提供 发行数量，已发行量, 抽签时间，购买时间，抽签结束时间
+   * @param product_id
+   */
+  async incremental_publish(
+    product_id: string,
+    count: number,
+    published_count: number,
+    draw_timestamp: string,
+    draw_end_timestamp: string,
+    sale_timestamp: string,
+  ) {
+    const product = await this.productsService.findOne(product_id)
+    if (product.attribute === ProductAttribute.gift) {
+      throw new BadRequestException('赠品无法增量发布')
+    }
+    delete product.id
+    delete product.create_date
+    delete product.update_date
+    delete product.delete_date
+    delete product.version
+    product.publish_count = count
+    product.stock_count = count
+    product.draw_timestamp = new Date(draw_timestamp)
+    product.draw_end_timestamp = new Date(draw_end_timestamp)
+    product.sale_timestamp = new Date(sale_timestamp)
+    // * 创建新藏品
+    const increamentalCreateRes = await this.productsService.create(product)
+    // * 设置redis
+    await this.__publish_setup_redis(increamentalCreateRes.id, increamentalCreateRes.publish_count, published_count)
+    // * 初始化抽签器
+    this.__publish_setup_draw_end_timeout(increamentalCreateRes.id, count, draw_end_timestamp)
 
     return {
-      operation_id: create_nft_class_id_operation_id,
-    };
+      id: increamentalCreateRes.id
+    }
+  }
+
+  /**
+   * 定向赠送
+   */
+  async send_product_item_to_collector(
+    product_id: string,
+    collector_id: number
+  ) {
+    // 获取数据
+    const [product, collector, stock_count] = await Promise.all([
+      this.productsService.findOne(product_id),
+      this.collectorService.findOne(collector_id),
+      this.redis.get(`gift:stock:${product_id}`)
+    ])
+    if (product.attribute === ProductAttribute.normal) {
+      throw new BadRequestException('常规藏品不支持赠送')
+    }
+    // 计算no
+    const no = product.publish_count - Number(stock_count) + 1 // 从 1 开始
+    // 创建藏品
+    const product_item = await this.productItemsService.create({
+      product_id: product_id,
+      no: no,
+      owner_id: collector_id
+    });
+    // 上链
+    const operation_id = await this._create_nft_for_product_item(product_item, collector)
+    // 更新库存
+    await this.redis.decr(`gift:stock:${product_id}`) // 原子 - 1
+    return {
+      operation_id
+    }
   }
 
   async create_nft_class_id_for_product(product_id: string) {
@@ -225,6 +332,12 @@ export class AffairService {
     return await this.redis.scard(`seckill:drawset:${product_id}`);
   }
 
+  /**
+   * @Deperacted
+   * @param product_id 
+   * @param add_count 
+   * @returns 
+   */
   async add_stock(product_id: string, add_count: number) {
     const product = (await this.productsService.findOne(product_id)) as Product;
     // redis更新
@@ -320,7 +433,9 @@ export class AffairService {
     );
     if (lucky_member.length === 0) {
       // 无人参加
-      this.logger.warn(`Draw for ${product_id}: No real user participate in draw...`);
+      this.logger.warn(
+        `Draw for ${product_id}: No real user participate in draw...`,
+      );
       return;
     }
     const saddRes = await this.redis.sadd(
@@ -361,10 +476,10 @@ export class AffairService {
     const deleteRes = await this.redis.del(
       `seckill:stock:${product_id}`,
       `seckill:items:${product_id}`,
-      `seckill:sale_timestamp:${product_id}`,
       `seckill:drawset:${product_id}`,
       `seckill:luckyset:${product_id}`,
       `seckill:buyhash:${product_id}`,
+      `gift:stock:${product_id}`
     );
     return deleteRes;
   }
@@ -406,9 +521,7 @@ export class AffairService {
     }
     if (
       this.dayjsService.dayjsify() <
-      this.dayjsService.dayjsify(
-        await this.redis.get(`seckill:sale_timestamp:${product_id}`),
-      )
+      this.dayjsService.dayjsify(product.sale_timestamp)
     ) {
       return {
         code: 4,
@@ -622,7 +735,7 @@ export class AffairService {
       true,
     )) as ProductItem;
     if (!product_item.product.nft_class_id) {
-      return { code: 10001, message: '产品还未上链' };
+      return { code: 10001, message: 'NFT类别还未上链' };
     }
     if (!order.buyer.bsn_address) {
       return { code: 10002, message: '用户无区块链钱包地址' };
@@ -678,7 +791,7 @@ export class AffairService {
       return { code: 10005, message: '藏家积分更新失败' };
     }
     //! 3. 藏品上链
-    await this._create_nft_for_product_item(product_item, order);
+    await this._create_nft_for_product_item(product_item, order.buyer);
     return { code: 10000, message: '订单完成,待藏品上链' };
   }
 
@@ -735,7 +848,7 @@ export class AffairService {
     //* 藏品上链
     const operation_id = await this._create_nft_for_product_item(
       product_item,
-      order,
+      order.buyer,
     );
     return {
       orderUpdateRes,
@@ -744,14 +857,14 @@ export class AffairService {
     };
   }
 
-  async _create_nft_for_product_item(product_item: ProductItem, order: Order) {
+  async _create_nft_for_product_item(product_item: ProductItem, buyer: Collector) {
     const createNftRes = await this.bsnService.create_nft({
       class_id: product_item.product.nft_class_id,
       name: `${product_item.product.name}#${product_item.no
         .toString()
-        .padStart(4, '0')}#晋元数藏@${order.buyer.username}(${order.buyer.id})`,
+        .padStart(4, '0')}#晋元数字@${buyer.username}(${buyer.id})`,
       uri: product_item.product.preview_img,
-      recipient: order.buyer.bsn_address,
+      recipient: buyer.bsn_address,
       data: product_item.id, // 将product_item_id作为data存储，后续查询用户名下藏品的流程是: 查链上用户名下藏品，查到data字段
     });
     if (createNftRes.code) {
@@ -785,7 +898,7 @@ export class AffairService {
     )) as ProductItem;
     const operation_id = await this._create_nft_for_product_item(
       product_item,
-      order,
+      order.buyer,
     );
     return operation_id;
   }
@@ -856,10 +969,14 @@ export class AffairService {
   }
 
   async is_lucky_set_gen(product_id: string) {
-    return await redisExceptionCatcher(this.redis.exists(`seckill:luckyset:${product_id}`))
+    return await redisExceptionCatcher(
+      this.redis.exists(`seckill:luckyset:${product_id}`),
+    );
   }
 
   async get_draw_set_count(product_id: string) {
-    return await redisExceptionCatcher(this.redis.scard(`seckill:drawset:${product_id}`))
+    return await redisExceptionCatcher(
+      this.redis.scard(`seckill:drawset:${product_id}`),
+    );
   }
 }

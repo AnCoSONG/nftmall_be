@@ -86,3 +86,8 @@ export enum CollectorRole {
   normal = 'normal',
   official = 'official'
 }
+
+export enum ProductAttribute {
+  normal = 'normal',
+  gift = 'gift'
+}

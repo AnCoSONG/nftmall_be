@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { SupportType, Tag } from '../../common/const';
+import { ProductAttribute, SupportType, Tag } from '../../common/const';
 import { Genre } from '../../genres/entities/genre.entity';
 
 export class CreateProductDto {
@@ -37,6 +37,13 @@ export class CreateProductDto {
     required: true,
   })
   src: string;
+
+  @ApiProperty({
+    description: '藏品海报',
+    example: 'https://picsum.photos/400/300?random=3',
+    required: true
+  })
+  poster: string;
 
   @ApiProperty({
     description: '商品类型',
@@ -94,11 +101,11 @@ export class CreateProductDto {
   limit: number;
 
   @ApiProperty({
-    description: '发售时间',
-    example: new Date(),
-    required: true,
+    description: '商品特殊属性表集',
+    enum: ProductAttribute,
+    example: ProductAttribute.normal
   })
-  sale_timestamp: Date;
+  attribute: ProductAttribute
 
   @ApiProperty({
     description: '抽签开始时间',
@@ -113,6 +120,13 @@ export class CreateProductDto {
     required: true,
   })
   draw_end_timestamp: Date;
+
+  @ApiProperty({
+    description: '发售时间',
+    example: new Date(),
+    required: true,
+  })
+  sale_timestamp: Date;
 
   @ApiProperty({
     description: '商品发行商',
