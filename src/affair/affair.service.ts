@@ -363,8 +363,17 @@ export class AffairService {
   }
 
   async sync_stock(product_id: string) {
+    const product = await this.productsService.findOne(product_id, false)
+    let redis_key: string;
+    if (product.attribute === 'gift') {
+      redis_key = `gift:stock:${product_id}`
+    } else if (product.attribute === 'normal') {
+      redis_key = `seckill:stock:${product_id}`
+    } else {
+      throw new InternalServerErrorException('未知product attribute: ' + product.attribute)
+    }
     const redis_stock_count = await this.redis.get(
-      `seckill:stock:${product_id}`,
+      redis_key,
     );
     const result = (await this.productsService.update(product_id, {
       stock_count: parseInt(redis_stock_count),
