@@ -43,5 +43,6 @@ export default () => {
       apiv3: process.env.WXPAY_APIV3,
       appsecret: process.env.WXPAY_APPSECRET,
     },
+    encrypt_secret: process.env.ENCRYPT_SECRET
   };
 };

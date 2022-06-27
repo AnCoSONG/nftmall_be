@@ -78,6 +78,7 @@ export class PublishersService {
           id: Like(`%${id}%`),
           name: Like(`%${name}%`),
         },
+        order: { update_date: 'DESC' },
         relations: with_relation ? ['works'] : [],
         skip: (page - 1) * limit,
         take: limit,
@@ -92,6 +93,7 @@ export class PublishersService {
         where: {
           name: Like(`%${name ?? ''}%`),
         },
+        order: { update_date: 'DESC' },
         relations: with_relation ? ['works'] : [],
         take: limit,
       }),
