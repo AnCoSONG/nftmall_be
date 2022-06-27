@@ -5,7 +5,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { FastifyRequest } from 'fastify';
+import { FastifyRequest, FastifyReply } from 'fastify';
 import { ConfigService } from '@nestjs/config';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
@@ -24,7 +24,6 @@ export class JwtGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
-    // const response = context.switchToHttp().getRequest<FastifyReply>();
 
     // console.log(request.headers);
     // if (!request.headers['x-csrf-token']) {
@@ -32,11 +31,11 @@ export class JwtGuard implements CanActivate {
     // }
     if (!request.cookies['xc']) {
       this.logger.debug('access token not found')
-      throw new UnauthorizedException('access token not found');
+      throw new UnauthorizedException('user: access token not found');
     }
     if (!request.cookies['tt']) {
       this.logger.debug('refresh token not found')
-      throw new UnauthorizedException('refresh token not found');
+      throw new UnauthorizedException('user: refresh token not found');
     }
     const access_token = request.cookies['xc'];
     const refresh_token = request.cookies['tt'];
@@ -53,22 +52,22 @@ export class JwtGuard implements CanActivate {
     });
     if (access_verify_res === AuthError.OK) {
       // todo: 完善debug代码
-      this.logger.debug(`user ${id} auth: access token ok!`)
+      this.logger.debug(`user ${id}/${request.ip} auth: access token ok!`)
       request['user'] = {
         code: AuthError.OK,
       };
       return true;
     } else if (access_verify_res === AuthError.OUTDATED) {
       // * 检查refresh token是否过期
-      this.logger.debug(`user ${id} auth: access token outdated!`)
+      this.logger.debug(`user ${id}/${request.ip} auth: access token outdated!`)
       const refresh_verify_res = this.authService.jwtVerify(refresh_token, {
         secret: this.configService.get('JWT_REFRESH_SECRET'),
         ignoreExpiration: false,
       });
       if (refresh_verify_res === AuthError.OUTDATED) {
         // * refresh token过期，需要重新登录
-        this.logger.debug(`user ${id} auth: refresh token outdated!`)
-        throw new UnauthorizedException('refresh token expired');
+        this.logger.debug(`user ${id}/${request.ip} auth: refresh token outdated!`)
+        throw new UnauthorizedException('user: refresh token expired');
       } else if (refresh_verify_res === AuthError.OK) {
         // * 检查refresh_token是否下线
         const cached = await redisExceptionCatcher(
@@ -76,17 +75,18 @@ export class JwtGuard implements CanActivate {
         );
         if (!cached) {
           // 已下线
-          this.logger.debug(`user ${id} auth: refresh token cache missed!`)
-          throw new UnauthorizedException('offline');
+          this.logger.debug(`user ${id}/${request.ip} auth: refresh token cache missed!`)
+          throw new UnauthorizedException('user: offline');
         }
         if (cached !== refresh_token) {
           // 检测到不匹配
-          this.logger.debug(`user ${id} auth: refresh token cache mismatched!`)
-          await redisExceptionCatcher(this.redis.del(`token_${id}`)); // 自动下线
-          throw new UnauthorizedException('token mismatch');
+          this.logger.debug(`user ${id}/${request.ip} auth: refresh token cache mismatched!`)
+          // todo: 清空redis导致正常登录也无法刷新token
+          // await redisExceptionCatcher(this.redis.del(`token_${id}`)); // 自动下线
+          throw new UnauthorizedException('user:token mismatch');
         }
         // * 刷新access token的同时更新refresh_token
-        this.logger.debug(`user ${id} auth: refresh and ok!`)
+        this.logger.debug(`user ${id}/${request.ip} auth: refresh and ok!`)
         const new_access_token = this.authService.jwtSign(
           {
             id: decoded.id,
@@ -144,11 +144,11 @@ export class JwtGuard implements CanActivate {
         return true;
       } else {
         this.logger.debug(`user ${id} auth: refresh token error: ${refresh_verify_res}`)
-        throw new UnauthorizedException('refresh token invalid');
+        throw new UnauthorizedException('user: refresh token invalid');
       }
     } else {
       this.logger.debug(`user ${id} auth: access token error: ${access_verify_res}`)
-      throw new UnauthorizedException('access token invalid');
+      throw new UnauthorizedException('user: access token invalid');
     }
   }
 }
