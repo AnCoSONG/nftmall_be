@@ -28,7 +28,7 @@ async function bootstrap() {
       cors: {
         origin:
           process.env.NODE_ENV === 'dev'
-            ? 'http://localhost:3000'
+            ? ['http://localhost:3000']
             : ['https://www.jinyuanshuzi.com', 'https://admin-hsxedh93jf4zthd0.jinyuanshuzi.com'],
         credentials: true,
       },

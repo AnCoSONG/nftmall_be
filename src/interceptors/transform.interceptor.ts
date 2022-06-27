@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { map, Observable } from 'rxjs';
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { AuthError } from '../common/const';
 
 @Injectable()
 export class TransformInterceptor implements NestInterceptor {
@@ -23,7 +24,6 @@ export class TransformInterceptor implements NestInterceptor {
       map((data) => {
         // set auth info in cookie for safty
         if (req['user'] && req['user'].data) {
-          // this.logger.log('updating tokens');
           // res.log.info('updating tokens', req['user']);
           res.cookie('tt', req['user'].data.refresh_token, {
             maxAge: 1000 * 60 * 60 * 24 * 15,

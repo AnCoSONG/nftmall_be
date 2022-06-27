@@ -38,7 +38,7 @@ export enum AuthError {
   REFRESHED = 1,
   OUTDATED = 2,
   INVALID = 3,
-  UNKNOWN = 4,
+  UNKNOWN = 4
 }
 
 export type Tag = {

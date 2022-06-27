@@ -32,10 +32,10 @@ export class Collector {
   @Column({ type: 'varchar', length: 255 })
   avatar: string;
 
-  @Column({ type: 'varchar', length: 12, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   real_name: string | null;
 
-  @Column({ type: 'varchar', length: 18, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   real_id: string | null;
 
   @Column({ type: 'int', default: 0 })
