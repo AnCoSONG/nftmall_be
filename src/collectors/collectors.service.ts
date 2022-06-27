@@ -204,9 +204,10 @@ export class CollectorsService {
             message: '未满16岁的用户不允许使用本平台，实名认证不予通过。',
           };
         }
+        // 存储加密版本
         const updateRes = await this.update(id, {
-          real_name: name,
-          real_id: idcard,
+          real_name: _name,
+          real_id: _idcard,
         });
         return {
           code: 0,
