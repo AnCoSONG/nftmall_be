@@ -108,7 +108,7 @@ export class ProductsService {
           type: In(types),
           on_chain_status: In(on_chain_statuses),
         },
-        order: { update_date: 'DESC' },
+        order: { create_date: 'DESC' },
         relations: with_relation ? ['genres', 'publisher'] : [],
         skip: (page - 1) * limit,
         take: limit,
