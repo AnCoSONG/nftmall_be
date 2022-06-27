@@ -59,6 +59,7 @@ export class OrdersController {
     return this.ordersService.query(page, limit, with_relation, id, trade_no, buyer_id);
   }
   @Get('/list')
+  @UseGuards(JwtGuard)
   listByCollector(
     @CollectorId() collector_id: number,
     @Query('page', ParseIntPipe) page: number,
@@ -90,16 +91,19 @@ export class OrdersController {
   }
 
   @Get('/is_paid')
+  @UseGuards(JwtGuard)
   isPaid(
-    @Query('collector_id') collector_id: string,
+    @CollectorId() collector_id: string,
+    // @Query('collector_id') collector_id: string,
     @Query('product_id') product_id: string,
   ) {
     return this.ordersService.is_paid(product_id, collector_id);
   }
 
   @Get('/is_unpaid')
+  @UseGuards(JwtGuard)
   isUnpaid(
-    @Query('collector_id') collector_id: number,
+    @CollectorId() collector_id: string,
     @Query('product_id') product_id: string,
   ) {
     return this.ordersService.is_unpaid(product_id, collector_id);

@@ -106,17 +106,19 @@ export class CollectorsController {
   }
 
   @Post('/isdraw')
-  isdraw(@Body() isDrawDto: IdProductIdDto) {
+  @UseGuards(JwtGuard)
+  isdraw(@CollectorId() collector_id: string, @Body() isDrawDto: IdProductIdDto) {
     return this.collectorsService.isdraw(
-      isDrawDto.collector_id,
+      +collector_id,
       isDrawDto.product_id,
     );
   }
 
   @Post('/islucky')
-  islucky(@Body() isLuckyDto: IdProductIdDto) {
+  @UseGuards(JwtGuard)
+  islucky(@CollectorId() collector_id: string, @Body() isLuckyDto: IdProductIdDto) {
     return this.collectorsService.islucky(
-      isLuckyDto.collector_id,
+      +collector_id,
       isLuckyDto.product_id,
     );
   }

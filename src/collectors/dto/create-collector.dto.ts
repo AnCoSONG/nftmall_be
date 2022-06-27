@@ -24,8 +24,6 @@ export class IDCheckDto {
 }
 
 export class IdProductIdDto {
-  @ApiProperty({ description: '用户ID', example: 1 })
-  collector_id: number;
 
   @ApiProperty({ description: '产品ID', example: 'string' })
   product_id: string;

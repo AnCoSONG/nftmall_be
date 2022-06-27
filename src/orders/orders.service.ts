@@ -232,7 +232,7 @@ export class OrdersService {
     return res === 1;
   }
 
-  async is_unpaid(product_id: string, buyer_id: number) {
+  async is_unpaid(product_id: string, buyer_id: string) {
     const res = await sqlExceptionCatcher(
       this.orderRepository.find({
         order: { update_date: 'DESC' },

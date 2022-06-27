@@ -67,7 +67,7 @@ export class ProductItemsService {
         where: {
           id: Like(`%${id ?? ''}%`),
           product_id: Like(`%${product_id ?? ''}%`),
-          owner: { username: Like(`%${owner ?? ''}%`) }
+          owner: { username: Like(`%${owner ?? ''}%`) },
         },
         skip: (page - 1) * limit,
         take: limit,
@@ -124,7 +124,22 @@ export class ProductItemsService {
     if (!product_item) {
       throw new NotFoundException(`Product Item with ID ${id} not found`);
     }
-    return product_item;
+    if (product_item) return product_item;
+  }
+
+  async findOneByUser(id: string, collector_id: string, with_relation = false) {
+    const product_item = await sqlExceptionCatcher(
+      this.productItemRepository.findOne(id, {
+        where: { owner_id: collector_id },
+        relations: with_relation
+          ? ['product', 'owner', 'product.publisher']
+          : [],
+      }),
+    );
+    if (!product_item) {
+      throw new NotFoundException(`Product Item with ID ${id} not found`);
+    }
+    if (product_item) return product_item;
   }
 
   async findOneByProductIdAndNo(
@@ -176,7 +191,7 @@ export class ProductItemsService {
     nft_class_id: string,
     operation_id: string,
     tx_hash: string,
-    timestamp: string
+    timestamp: string,
   ) {
     this.logger.log(`[ON CHAIN SUCCESS] ${nft_class_id} ${nft_id} ${tx_hash}`);
     return await this.update(id, {
