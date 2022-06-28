@@ -89,6 +89,7 @@ export class AuthService {
     // 登录成功逻辑
     // 0. 检查用户是否已经注册了账号，如果没注册，帮用户创建一个记录
     const data = await this.collectorService.findByPhone(loginDto.phone);
+    // this.logger.debug('data: ' + JSON.stringify(data))
     let newCollector: Collector | null = null;
     if (data.length === 0) {
       // 创建一个
@@ -101,6 +102,7 @@ export class AuthService {
         avatar: `https://avatars.dicebear.com/api/pixel-art/${loginDto.phone}.svg`,
       });
     }
+    // this.logger.debug('new Collector: ' + JSON.stringify(newCollector))
     // 拿到用户信息
     const collector = data.length === 1 ? data[0] : newCollector;
     this.logger.log(`用户${collector.username}(id: ${collector.id}) 申请登录`);

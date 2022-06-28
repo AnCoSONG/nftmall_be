@@ -16,6 +16,7 @@ import { BsnService } from '../bsn/bsn.service';
 import { requestKeyErrorException } from '../exceptions';
 import { HttpService } from '@nestjs/axios';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
+import { randomBytes } from 'crypto';
 import Redis from 'ioredis';
 import { CryptoJsService } from '../lib/crypto-js/crypto-js.service';
 @Injectable()
@@ -32,11 +33,23 @@ export class CollectorsService {
 
   async create(createCollectorDto: CreateCollectorDto) {
     // 创建时直接上链
-    const result = await this.findByUsername(createCollectorDto.username);
-    if (result !== 0) {
-      return {
-        message: '重复用户名',
-      };
+    let isDuplicated = false;
+    const result = await this.countByUsername(createCollectorDto.username);
+    if (result && result !== 0) {
+      isDuplicated = true;
+    }
+    while (isDuplicated) {
+      // 直到不重复
+      const newName = `藏家${createCollectorDto.phone.substring(
+        7,
+      )}${randomBytes(4).toString('hex')}`;
+      const count = await this.countByUsername(newName);
+      if (count === 0) {
+        isDuplicated = false;
+        createCollectorDto.username = newName;
+      } else {
+        continue;
+      }
     }
     const collector = this.collectorRepository.create(createCollectorDto);
     const createAccountRes = await this.bsnService.create_account(
@@ -57,9 +70,17 @@ export class CollectorsService {
     );
   }
 
-  async findByUsername(username: string) {
+  async findByUsername(username: string): Promise<Collector[]> {
     return await sqlExceptionCatcher(
       this.collectorRepository.find({
+        where: { username },
+      }),
+    );
+  }
+
+  async countByUsername(username: string): Promise<number> {
+    return await sqlExceptionCatcher(
+      this.collectorRepository.count({
         where: { username },
       }),
     );
