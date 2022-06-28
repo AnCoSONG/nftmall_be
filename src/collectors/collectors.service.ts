@@ -194,7 +194,6 @@ export class CollectorsService {
   async idcheck(_name: string, _idcard: string, id: number) {
     const name = this.cryptoJsService.decrypt(_name);
     const idcard = this.cryptoJsService.decrypt(_idcard);
-    // console.log(name, idcard);
     const isChecked = await this.isIdCheck(id);
     if (isChecked) {
       return {
@@ -306,7 +305,7 @@ export class CollectorsService {
     return await sqlExceptionCatcher(this.collectorRepository.delete(id));
   }
 
-  async isAgeQualified(birthday: string) {
+  isAgeQualified(birthday: string) {
     const year = parseInt(birthday.slice(0, 4));
     const month = parseInt(birthday.slice(4, 6));
     const day = parseInt(birthday.slice(6, 8));
