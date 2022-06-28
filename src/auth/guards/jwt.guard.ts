@@ -34,7 +34,7 @@ export class JwtGuard implements CanActivate {
       throw new UnauthorizedException('user: access token not found');
     }
     if (!request.cookies['tt']) {
-      this.logger.debug('refresh ptoken not found')
+      this.logger.debug('refresh token not found')
       throw new UnauthorizedException('user: refresh token not found');
     }
     const access_token = request.cookies['xc'];
