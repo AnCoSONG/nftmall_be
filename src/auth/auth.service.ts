@@ -103,7 +103,7 @@ export class AuthService {
     }
     // 拿到用户信息
     const collector = data.length === 1 ? data[0] : newCollector;
-    this.logger.log('拿到用户信息');
+    this.logger.log(`用户${collector.username}(id: ${collector.id}) 申请登录`);
     // 1. 生成access_token & refresh_token
     const access_token = this.jwtService.sign({
       id: collector.id,
@@ -139,7 +139,7 @@ export class AuthService {
         `token_${collector.id}`,
         refresh_token,
         'EX',
-        14 * 24 * 60 * 60, // 14天过期
+        15 * 24 * 60 * 60, // 15天过期
       ),
     );
     this.logger.log('redis中设置refresh_token', set_res);
@@ -271,7 +271,12 @@ export class AuthService {
         `${fetchRes.data.errcode}: ${fetchRes.data.errmsg}`,
       );
     } else {
-      await this.redis.set(`wx_code:${code}`, fetchRes.data.openid, 'EX', 60 * 10); // 10分钟code失效
+      await this.redis.set(
+        `wx_code:${code}`,
+        fetchRes.data.openid,
+        'EX',
+        60 * 10,
+      ); // 10分钟code失效
       return fetchRes.data.openid;
     }
   }
