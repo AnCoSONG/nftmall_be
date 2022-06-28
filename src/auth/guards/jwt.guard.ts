@@ -34,7 +34,7 @@ export class JwtGuard implements CanActivate {
       throw new UnauthorizedException('user: access token not found');
     }
     if (!request.cookies['tt']) {
-      this.logger.debug('refresh token not found')
+      this.logger.debug('refresh ptoken not found')
       throw new UnauthorizedException('user: refresh token not found');
     }
     const access_token = request.cookies['xc'];
@@ -45,6 +45,9 @@ export class JwtGuard implements CanActivate {
       phone: string;
     };
     const id = decoded['id'];
+    if (!id) {
+      throw new UnauthorizedException("user: undefined id")
+    }
     // access token是否过期
     const access_verify_res = this.authService.jwtVerify(access_token, {
       secret: this.configService.get('JWT_SECRET'),
