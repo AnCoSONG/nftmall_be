@@ -17,13 +17,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const statusCode = exception.getStatus();
     const message = exception.message;
 
-    const errorResponse = {
-      statusCode,
-      code: statusCode,
-      message: exception.message,
-      error: exception.name,
-      url: request.url,
-    };
     if (statusCode === 401) {
       const msgArr = message.split('--')
       const operation = msgArr[msgArr.length - 1]
@@ -33,9 +26,22 @@ export class HttpExceptionFilter implements ExceptionFilter {
         response.clearCookie('__tt__', { path: '/' });
         response.clearCookie('__xc__', { path: '/' });
       }
-      
     }
-
+    const errorResponse = {
+      statusCode,
+      code: statusCode,
+      message: exception.message,
+      error: exception.name,
+      url: request.url,
+    };
+    if (exception.message === 'user:offline[MISMATCH]--CLR') {
+      errorResponse.message = '您在其他设备完成过登录，本设备自动下线'
+    }
+    else if (exception.message === 'user:offline[NOCACHE]--CLR') {
+      errorResponse.message = '您已被下线'
+    } else if (exception.message === 'user:refresh_token_expired--CLR') {
+      errorResponse.message = '登录态已过期'
+    }
     response.status(exception.getStatus()).send(errorResponse);
   }
 }
