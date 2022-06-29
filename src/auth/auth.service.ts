@@ -184,7 +184,10 @@ export class AuthService {
     return collector;
   }
 
-  async gen_tokens(userdata: { id: number; username: string; phone: string }) {
+  async gen_tokens(
+    userdata: { id: number; username: string; phone: string },
+    last_refresh_token?: string,
+  ) {
     const access_token = this.jwtSign(
       {
         id: userdata.id,
@@ -213,6 +216,23 @@ export class AuthService {
     this.logger.debug(
       `updating redis refresh token for user id ${userdata.id}`,
     );
+    this.logger.debug(`setting old refresh token: ${last_refresh_token}`);
+    if (last_refresh_token) {
+      const redisLastTokenRes = await redisExceptionCatcher(
+        this.redis.set(
+          `old_token_${userdata.id}`,
+          last_refresh_token,
+          'EX',
+          Math.min(
+            Math.round(
+              ms(this.configService.get('jwt.access_expires_in')) / 2000, // half of access token
+            ),
+            60, // * 提供最多60秒来解决Promise all 接口刷新token时带来的refresh token不对齐问题
+          ), 
+        ),
+      );
+      this.logger.debug('set last refresh token: ' + redisLastTokenRes);
+    }
     const redisUpdateResult = await redisExceptionCatcher(
       this.redis.set(
         `token_${userdata.id}`,
