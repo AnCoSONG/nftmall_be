@@ -14,11 +14,13 @@ import { BsnService } from '../bsn/bsn.service';
 import { BSN_TX_STATUS } from '../common/const';
 import { ProductItemsService } from '../product-items/product-items.service';
 import { ProductsService } from '../products/products.service';
+import { AffairService } from './affair.service';
 
 @Processor('affair')
 export class AffairProcessor {
   private readonly logger = new Logger(AffairProcessor.name);
   constructor(
+    private readonly affairService: AffairService,
     private readonly bsnService: BsnService,
     private readonly productsService: ProductsService,
     private readonly productItemsService: ProductItemsService,
@@ -67,11 +69,16 @@ export class AffairProcessor {
     }
     // finished
     if (tx_res.class_id && tx_res.class_id !== '' && tx_res.tx_hash !== '') {
-      this.logger.log('create nft class complete, success tx hash: ' + tx_res.tx_hash + ' ' + tx_res.timestamp);
+      this.logger.log(
+        'create nft class complete, success tx hash: ' +
+          tx_res.tx_hash +
+          ' ' +
+          tx_res.timestamp,
+      );
       const updateRes = await this.productsService.onChainSuccess(
         job.data.product_id,
         tx_res.class_id,
-        tx_res.tx_hash // 只在成功时才有交易哈希
+        tx_res.tx_hash, // 只在成功时才有交易哈希
       );
       this.logger.log(`update nft class id of ${job.data.product_id} complete`);
       return updateRes;
@@ -91,7 +98,7 @@ export class AffairProcessor {
       `queue:status:create-product-items:${job.data.product_id}`,
       'processing',
     );
-    // begin from 1, like: [1, count] 
+    // begin from 1, like: [1, count]
     for (let i = 1; i <= job.data.count; i++) {
       const createRes = await this.productItemsService.create({
         product_id: job.data.product_id,
@@ -178,22 +185,27 @@ export class AffairProcessor {
     }
     // 更新
     if (tx_res.nft_id && tx_res.nft_id !== '' && tx_res.tx_hash !== '') {
-      this.logger.log('create nft success, success tx hash: ' + tx_res.tx_hash)
+      this.logger.log('create nft success, success tx hash: ' + tx_res.tx_hash);
       const updateRes = await this.productItemsService.onChainSuccess(
         job.data.product_item_id,
         tx_res.nft_id,
         job.data.nft_class_id,
         job.data.operation_id,
         tx_res.tx_hash, // 只在成功时才有交易哈希
-        tx_res.timestamp // 更新为更准确的上链时间
+        tx_res.timestamp, // 更新为更准确的上链时间
       );
       this.logger.log(
         `[UPDATE NFT ID] update nft id of ${job.data.product_item_id} with ${tx_res.nft_id} complete`,
       );
       return updateRes;
     } else {
-      this.logger.error('[UPDATE NFT ID] update nft id: failed: nft id or tx_hash is null or empty');
-      this.productItemsService.onChainFail(job.data.product_item_id, job.data.operation_id);
+      this.logger.error(
+        '[UPDATE NFT ID] update nft id: failed: nft id or tx_hash is null or empty',
+      );
+      this.productItemsService.onChainFail(
+        job.data.product_item_id,
+        job.data.operation_id,
+      );
       throw new Error('Nft id is null or empty');
     }
   }
@@ -201,5 +213,24 @@ export class AffairProcessor {
   @OnQueueActive({ name: 'update-product-item-nft-id' })
   onUpdateProductItemNftIdActive(job: Job) {
     this.logger.log(`${job.id} - ${job.name} - active!`, '[UPDATE NFT ID]');
+  }
+
+  @Process('gen-lucky-set')
+  async genLuckySetDelayed(
+    job: Job<{
+      product_id: string;
+      draw_count: number;
+    }>,
+  ) {
+    // 检测是否已生成
+    return await this.affairService.genLuckySet(
+      job.data.product_id,
+      job.data.draw_count,
+    );
+  }
+
+  @OnQueueActive({ name: 'gen-lucky-set' })
+  onGenLuckySetActive(job: Job) {
+    this.logger.log(`${job.id} - ${job.name} - active!`);
   }
 }
