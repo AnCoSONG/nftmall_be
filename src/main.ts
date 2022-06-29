@@ -34,12 +34,12 @@ async function bootstrap() {
             : ['https://www.jinyuanshuzi.com', 'https://admin-hsxedh93jf4zthd0.jinyuanshuzi.com'],
         credentials: true,
       },
-      bufferLogs: process.env.NODE_ENV !== 'dev'
+      bufferLogs: false
     },
   );
-  if (process.env.NODE_ENV !== 'dev') {
-    app.useLogger(app.get(Logger));
-  }
+  // if (process.env.NODE_ENV !== 'dev') {
+  //   app.useLogger(app.get(Logger));
+  // }
   app.setGlobalPrefix('v1');
   // register is a wrapper for native fastify.register()
   await app.register(fastifyHelmet, {

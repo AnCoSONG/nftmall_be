@@ -25,7 +25,7 @@ export const RequestLogger = createParamDecorator(
 export const CollectorId = createParamDecorator(
   (data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest<FastifyRequest>();
-    const decoded = decode(request.cookies['__xc__']) as { id: string };
+    const decoded = decode(request.cookies['__tt__']) as { id: string };
     return decoded.id;
   },
 );

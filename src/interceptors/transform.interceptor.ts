@@ -27,6 +27,9 @@ export class TransformInterceptor implements NestInterceptor {
       map((data) => {
         // set auth info in cookie for safty
         if (req['user'] && req['user'].data) {
+          this.logger.debug('setting token: ' + JSON.stringify(req['user']))
+          // this.logger.debug('refresh maxAge: ' + Math.floor(ms('15d') / 1000) )
+          // this.logger.debug('access maxAge: ' + Math.floor(ms('5s') / 1000) )
           // res.log.info('updating tokens', req['user']);
           res.cookie('__tt__', req['user'].data.refresh_token, {
             maxAge: Math.floor(ms('15d') / 1000),

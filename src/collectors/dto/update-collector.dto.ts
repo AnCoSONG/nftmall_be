@@ -16,4 +16,7 @@ export class UpdateCollectorDto extends PartialType(CreateCollectorDto) {
   bsn_address?: string;
   @ApiProperty({ description: '积分', example: 1 })
   credit?: number;
+
+  @ApiProperty({ description: '微信账号ID' })
+  wx_openid?: string;
 }

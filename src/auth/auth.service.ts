@@ -215,7 +215,7 @@ export class AuthService {
         `token_${userdata.id}`,
         refresh_token,
         'EX',
-        ms(this.configService.get('jwt.refresh_expires_in')),
+        Math.round(ms(this.configService.get('jwt.refresh_expires_in'))/1000),
       ),
     );
     this.logger.debug(
@@ -228,49 +228,49 @@ export class AuthService {
     };
   }
 
-  async refresh(refresh_token: string) {
-    // 1. 检查refresh token
-    const data = await redisExceptionCatcher(this.redis.get(refresh_token));
-    if (!data) {
-      // refresh token不存在，需要重新登录
-      throw new UnauthorizedException('refresh token error');
-    }
-    // 2. 删除redis中的refresh token
-    await redisExceptionCatcher(this.redis.del(refresh_token));
-    // 3. 解析refresh_token获取payload
-    const payload = this.jwtService.decode(refresh_token) as {
-      phone: string;
-      username: string;
-    };
-    // 4. 生成access_token 和 新的 refresh_token
-    const access_token = this.jwtService.sign({
-      phone: payload.phone,
-      username: payload.username,
-    });
-    const refresh_token_new = this.jwtService.sign(
-      {
-        phone: payload.phone,
-        username: payload.username,
-      },
-      {
-        secret: this.configService.get('jwt.refresh_secret'),
-        expiresIn: this.configService.get('jwt.refresh_expires_in'),
-      },
-    );
-    // 5. 设置refresh_token到redis
-    await redisExceptionCatcher(
-      this.redis.set(
-        refresh_token_new,
-        1,
-        'EX',
-        15 * 24 * 60 * 60, // 14天过期
-      ),
-    );
-    return {
-      access_token,
-      refresh_token: refresh_token_new,
-    };
-  }
+  // async refresh(refresh_token: string) {
+  //   // 1. 检查refresh token
+  //   const data = await redisExceptionCatcher(this.redis.get(refresh_token));
+  //   if (!data) {
+  //     // refresh token不存在，需要重新登录
+  //     throw new UnauthorizedException('refresh token error');
+  //   }
+  //   // 2. 删除redis中的refresh token
+  //   await redisExceptionCatcher(this.redis.del(refresh_token));
+  //   // 3. 解析refresh_token获取payload
+  //   const payload = this.jwtService.decode(refresh_token) as {
+  //     phone: string;
+  //     username: string;
+  //   };
+  //   // 4. 生成access_token 和 新的 refresh_token
+  //   const access_token = this.jwtService.sign({
+  //     phone: payload.phone,
+  //     username: payload.username,
+  //   });
+  //   const refresh_token_new = this.jwtService.sign(
+  //     {
+  //       phone: payload.phone,
+  //       username: payload.username,
+  //     },
+  //     {
+  //       secret: this.configService.get('jwt.refresh_secret'),
+  //       expiresIn: this.configService.get('jwt.refresh_expires_in'),
+  //     },
+  //   );
+  //   // 5. 设置refresh_token到redis
+  //   await redisExceptionCatcher(
+  //     this.redis.set(
+  //       refresh_token_new,
+  //       1,
+  //       'EX',
+  //       15 * 24 * 60 * 60, // 14天过期
+  //     ),
+  //   );
+  //   return {
+  //     access_token,
+  //     refresh_token: refresh_token_new,
+  //   };
+  // }
 
   async fetchOpenid(encrypt_code: string) {
     const code = this.cryptoJsService.decrypt(encrypt_code);
@@ -384,7 +384,7 @@ export class AuthService {
     const timestamp = Math.round(Date.now() / 1000);
 
     const concatenate_str = `jsapi_ticket=${jsapi_ticket}&noncestr=${noncestr}&timestamp=${timestamp}&url=${url}`;
-    this.logger.debug(`concatenate_str: ${concatenate_str}`);
+    // this.logger.debug(`concatenate_str: ${concatenate_str}`);
     const signature = this.cryptoJsService.sha1(concatenate_str);
     return {
       signature,
