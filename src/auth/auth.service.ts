@@ -21,7 +21,7 @@ import { Collector } from '../collectors/entities/collector.entity';
 import { AuthError } from '../common/const';
 import { AliService } from '../ali/ali.service';
 import { randomBytes } from 'crypto';
-import { FastifyRequest } from 'fastify'
+import { FastifyRequest } from 'fastify';
 import { CryptoJsService } from '../lib/crypto-js/crypto-js.service';
 import { HttpService } from '@nestjs/axios';
 import ms from 'ms';
@@ -174,9 +174,10 @@ export class AuthService {
   }
 
   async fetchUserInfo(req: FastifyRequest) {
-    const refresh_token = req.cookies[this.configService.get('jwt.refresh_cookie_name')]
+    const refresh_token =
+      req.cookies[this.configService.get('jwt.refresh_cookie_name')];
     if (!refresh_token) {
-      throw new UnauthorizedException('refresh token missed')
+      throw new UnauthorizedException('refresh token missed');
     }
     const { id } = this.jwtDecode(refresh_token);
     const collector = await this.collectorService.findOne(id);
@@ -209,13 +210,15 @@ export class AuthService {
         algorithm: this.configService.get('jwt.refresh_algorithm'),
       },
     );
-
+    this.logger.debug(
+      `updating redis refresh token for user id ${userdata.id}`,
+    );
     const redisUpdateResult = await redisExceptionCatcher(
       this.redis.set(
         `token_${userdata.id}`,
         refresh_token,
         'EX',
-        Math.round(ms(this.configService.get('jwt.refresh_expires_in'))/1000),
+        Math.round(ms(this.configService.get('jwt.refresh_expires_in')) / 1000),
       ),
     );
     this.logger.debug(
