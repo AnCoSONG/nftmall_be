@@ -9,10 +9,13 @@ import {
 import { map, Observable } from 'rxjs';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthError } from '../common/const';
+import ms from 'ms';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TransformInterceptor implements NestInterceptor {
   private readonly logger = new Logger(TransformInterceptor.name);
+  // constructor(private readonly configService: ConfigService) {}
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest<FastifyRequest>();
     const res = context.switchToHttp().getResponse<FastifyReply>();
@@ -25,14 +28,14 @@ export class TransformInterceptor implements NestInterceptor {
         // set auth info in cookie for safty
         if (req['user'] && req['user'].data) {
           // res.log.info('updating tokens', req['user']);
-          res.cookie('tt', req['user'].data.refresh_token, {
-            maxAge: 1000 * 60 * 60 * 24 * 15,
+          res.cookie('__tt__', req['user'].data.refresh_token, {
+            maxAge: Math.floor(ms('15d') / 1000),
             httpOnly: true,
             secure: true,
             path: '/',
           });
-          res.cookie('xc', req['user'].data.access_token, {
-            maxAge: 1000 * 60 * 60 * 24 * 15, // same with refresh token
+          res.cookie('__xc__', req['user'].data.access_token, {
+            maxAge: Math.floor(ms('30s') / 1000), // same with refresh token
             httpOnly: true,
             secure: true,
             path: '/',

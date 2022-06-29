@@ -14,9 +14,11 @@ export default () => {
       password: process.env.REDIS_PASSWORD,
     },
     jwt: {
+      access_cookie_name: process.env.JWT_ACCESS_COOKIE_NAME,
       access_secret: process.env.JWT_ACCESS_SECRET,
       access_expires_in: process.env.JWT_ACCESS_EXPIRES_IN,
       access_algorithm: process.env.JWT_ACCESS_ALGORITHM,
+      refresh_cookie_name: process.env.JWT_REFRESH_COOKIE_NAME,
       refresh_secret: process.env.JWT_REFRESH_SECRET,
       refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN,
       refresh_algorithm: process.env.JWT_REFRESH_ALGORITHM,
@@ -43,6 +45,9 @@ export default () => {
       apiv3: process.env.WXPAY_APIV3,
       appsecret: process.env.WXPAY_APPSECRET,
     },
-    encrypt_secret: process.env.ENCRYPT_SECRET
+    encrypt_secret: process.env.ENCRYPT_SECRET,
+    admin: {
+      secret: process.env.ADMIN_SECRET
+    }
   };
 };

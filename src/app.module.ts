@@ -30,6 +30,8 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from 'nestjs-throttler-storage-redis';
 import { AliModule } from './ali/ali.module';
 import { DocumentsModule } from './documents/documents.module';
+import { LoggerModule } from 'nestjs-pino';
+import pino from 'pino';
 
 declare module 'ioredis' {
   interface RedisCommander<Context> {
@@ -54,6 +56,13 @@ declare module 'ioredis' {
 }
 @Module({
   imports: [
+    LoggerModule.forRoot({
+      pinoHttp: {
+        stream: pino.destination({
+          dest: './index.log'
+        })
+      }
+    }),
     ConfigModule.forRoot({
       // .env 也不应该上传，应该根据Github Action动态生成
       envFilePath: ['.env.local', '.env'],

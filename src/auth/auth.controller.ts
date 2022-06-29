@@ -71,8 +71,8 @@ export class AuthController {
   ) {
     const logoutRes = await this.authService.logout(data);
     if (logoutRes === 0 || logoutRes === 1) {
-      res.clearCookie('xc', { path: '/' });
-      res.clearCookie('tt', { path: '/' });
+      res.clearCookie('__xc__', { path: '/' });
+      res.clearCookie('__tt__', { path: '/' });
       // 需要在logout设置req.user = undefined，因为如果退出时，用户刚好更新，就会覆盖掉退出的效果
       req['user'] = undefined;
       return 'logout success';
@@ -84,8 +84,7 @@ export class AuthController {
   @Get('/fetchUserInfo')
   @UseGuards(JwtGuard)
   async fetchUserInfo(@Req() req: FastifyRequest) {
-    const access_token = req.cookies['xc'];
-    return await this.authService.fetchUserInfo(access_token);
+    return await this.authService.fetchUserInfo(req);
   }
 
   @Get('/fetchOpenid')

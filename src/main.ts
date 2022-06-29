@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { Logger } from 'nestjs-pino';
 import fastifyHelmet from '@fastify/helmet';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import {
@@ -13,6 +14,7 @@ import FastifyCsrf from 'fastify-csrf';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
 import minimist = require('minimist');
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   // todo: production level logger config
@@ -32,8 +34,12 @@ async function bootstrap() {
             : ['https://www.jinyuanshuzi.com', 'https://admin-hsxedh93jf4zthd0.jinyuanshuzi.com'],
         credentials: true,
       },
+      bufferLogs: process.env.NODE_ENV !== 'dev'
     },
   );
+  if (process.env.NODE_ENV !== 'dev') {
+    app.useLogger(app.get(Logger));
+  }
   app.setGlobalPrefix('v1');
   // register is a wrapper for native fastify.register()
   await app.register(fastifyHelmet, {

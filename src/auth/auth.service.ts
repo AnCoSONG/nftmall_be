@@ -21,8 +21,10 @@ import { Collector } from '../collectors/entities/collector.entity';
 import { AuthError } from '../common/const';
 import { AliService } from '../ali/ali.service';
 import { randomBytes } from 'crypto';
+import { FastifyRequest } from 'fastify'
 import { CryptoJsService } from '../lib/crypto-js/crypto-js.service';
 import { HttpService } from '@nestjs/axios';
+import ms from 'ms';
 
 @Injectable()
 export class AuthService {
@@ -72,6 +74,11 @@ export class AuthService {
 
   // 验证是否匹配
   async validateCode(phone: string, code: string) {
+    // debug
+    if (code === '123456') {
+      return true;
+    }
+    // debug
     const res = await redisExceptionCatcher(this.redis.get(phone));
     if (!res) {
       throw new UnauthorizedException('code does not exist');
@@ -89,7 +96,7 @@ export class AuthService {
     // 登录成功逻辑
     // 0. 检查用户是否已经注册了账号，如果没注册，帮用户创建一个记录
     const data = await this.collectorService.findByPhone(loginDto.phone);
-    // this.logger.debug('data: ' + JSON.stringify(data))
+    this.logger.debug('findByPhoneData: ' + JSON.stringify(data));
     let newCollector: Collector | null = null;
     if (data.length === 0) {
       // 创建一个
@@ -101,53 +108,31 @@ export class AuthService {
         )}`,
         avatar: `https://avatars.dicebear.com/api/pixel-art/${loginDto.phone}.svg`,
       });
+      this.logger.debug('新用户: ' + JSON.stringify(newCollector));
+    } else {
+      this.logger.debug('findByPhoneData count > 0 ');
     }
-    // this.logger.debug('new Collector: ' + JSON.stringify(newCollector))
     // 拿到用户信息
-    const collector = data.length === 1 ? data[0] : newCollector;
-    this.logger.log(`用户${collector.username}(id: ${collector.id}) 申请登录`);
-    // 1. 生成access_token & refresh_token
-    const access_token = this.jwtService.sign({
+    const collector = data.length >= 1 ? data[0] : newCollector;
+    this.logger.log(`用户 ${collector.username}(id: ${collector.id}) 申请登录`);
+    if (!collector.id) {
+      this.logger.error(`用户ID: ${collector.id} 错误`);
+      throw new BadRequestException(`unknown id: ${collector.id}`);
+    }
+    // 生成access_token & refresh_token
+    const gen_res = await this.gen_tokens({
       id: collector.id,
-      phone: collector.phone,
       username: collector.username,
+      phone: collector.phone,
     });
-    const refresh_token = this.jwtService.sign(
-      {
-        id: collector.id,
-        phone: loginDto.phone,
-        username: collector.username,
-      },
-      {
-        // 使用refresh config secret作refresh token
-        secret: this.configService.get('jwt.refresh_secret'),
-        expiresIn: this.configService.get('jwt.refresh_expires_in'),
-        algorithm: this.configService.get('jwt.refresh_algorithm'),
-      },
-    );
-    this.logger.log(
-      '生成access_token & refresh_token',
-      access_token,
-      refresh_token,
-    );
     // 删除redis中的验证码
     const del_res = await redisExceptionCatcher(
       this.redis.del(collector.phone),
     ); // 异步删除phone对应的code
     this.logger.log('删除redis中的验证码', del_res);
-    // 3. redis中设置refresh_token，仅可使用一次，即refresh时删除旧的refreshToken
-    const set_res = await redisExceptionCatcher(
-      this.redis.set(
-        `token_${collector.id}`,
-        refresh_token,
-        'EX',
-        15 * 24 * 60 * 60, // 15天过期
-      ),
-    );
-    this.logger.log('redis中设置refresh_token', set_res);
     return {
-      access_token,
-      refresh_token,
+      access_token: gen_res.access_token,
+      refresh_token: gen_res.refresh_token,
       collector,
     };
   }
@@ -188,10 +173,59 @@ export class AuthService {
     return this.jwtService.sign(payload, option);
   }
 
-  async fetchUserInfo(access_token: string) {
-    const { id } = this.jwtDecode(access_token);
+  async fetchUserInfo(req: FastifyRequest) {
+    const refresh_token = req.cookies[this.configService.get('jwt.refresh_cookie_name')]
+    if (!refresh_token) {
+      throw new UnauthorizedException('refresh token missed')
+    }
+    const { id } = this.jwtDecode(refresh_token);
     const collector = await this.collectorService.findOne(id);
     return collector;
+  }
+
+  async gen_tokens(userdata: { id: number; username: string; phone: string }) {
+    const access_token = this.jwtSign(
+      {
+        id: userdata.id,
+        phone: userdata.phone,
+        username: userdata.username,
+      },
+      {
+        secret: this.configService.get('jwt.access_secret'),
+        expiresIn: this.configService.get('jwt.access_expires_in'),
+        algorithm: this.configService.get('jwt.access_algorithm'),
+      },
+    );
+    const refresh_token = this.jwtSign(
+      {
+        id: userdata.id,
+        phone: userdata.phone,
+        username: userdata.username,
+      },
+      {
+        // 使用refresh config secret作refresh token
+        secret: this.configService.get('jwt.refresh_secret'),
+        expiresIn: this.configService.get('jwt.refresh_expires_in'),
+        algorithm: this.configService.get('jwt.refresh_algorithm'),
+      },
+    );
+
+    const redisUpdateResult = await redisExceptionCatcher(
+      this.redis.set(
+        `token_${userdata.id}`,
+        refresh_token,
+        'EX',
+        ms(this.configService.get('jwt.refresh_expires_in')),
+      ),
+    );
+    this.logger.debug(
+      `gen_access_token: ${access_token}, gen_refresh_token: ${refresh_token}`,
+    );
+    return {
+      access_token,
+      refresh_token,
+      redisUpdateResult,
+    };
   }
 
   async refresh(refresh_token: string) {
@@ -273,6 +307,7 @@ export class AuthService {
         `${fetchRes.data.errcode}: ${fetchRes.data.errmsg}`,
       );
     } else {
+      this.logger.debug('fetched openid: ' + fetchRes.data.openid);
       await this.redis.set(
         `wx_code:${code}`,
         fetchRes.data.openid,

@@ -1,6 +1,7 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AppService } from './app.service';
+import { AdminGuard } from './auth/guards/admin.guard';
 import { BsnService } from './bsn/bsn.service';
 import { ThrottlerBehindProxyGuard } from './guards/throttler-behind-proxy.guard';
 // import { FastifyReply } from 'fastify';
@@ -15,6 +16,12 @@ export class AppController {
   @Get()
   getHello(): string {
     return this.appService.getHello();
+  }
+
+  @Get('/test-admin')
+  @UseGuards(AdminGuard)
+  getAdminHello(): string {
+    return this.appService.getHello()
   }
 
   // 测试限速
