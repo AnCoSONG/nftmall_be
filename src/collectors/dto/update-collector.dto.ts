@@ -9,11 +9,16 @@ export class UpdateCollectorDto extends PartialType(CreateCollectorDto) {
 
   @ApiProperty({ description: '身份证', example: null })
   real_id?: string | null;
+
   @ApiProperty({
     description: 'BSN钱包地址',
     example: '1231213128381sw1ey21hd12h8gd19',
   })
   bsn_address?: string;
+
+  @ApiProperty({ description: '邮寄地址', example: null})
+  delivery_address?: string;
+
   @ApiProperty({ description: '积分', example: 1 })
   credit?: number;
 

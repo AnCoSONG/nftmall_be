@@ -29,6 +29,9 @@ export class Collector {
   @Column({ type: 'varchar', length: 100, nullable: true })
   email: string | null;
 
+  @Column({type: 'varchar', length: 255, nullable: true})
+  delivery_address: string | null;
+
   @Column({ type: 'varchar', length: 255 })
   avatar: string;
 
@@ -42,7 +45,7 @@ export class Collector {
   credit: number;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  wx_openid?: string;
+  wx_openid: string | null;
 
   @Column({ type: 'enum', enum: CollectorRole, default: CollectorRole.normal })
   role: CollectorRole;
