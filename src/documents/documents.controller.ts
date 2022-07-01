@@ -8,8 +8,10 @@ import {
   Delete,
   Query,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
+import { AdminGuard } from '../auth/guards/admin.guard';
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
@@ -20,16 +22,18 @@ export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
   @Post()
+  @UseGuards(AdminGuard)
   create(@Body() createDocumentDto: CreateDocumentDto) {
     return this.documentsService.create(createDocumentDto);
   }
 
-  @Get()
-  findAll() {
-    return this.documentsService.findAll();
-  }
+  // @Get()
+  // findAll() {
+  //   return this.documentsService.findAll();
+  // }
 
   @Get('/list')
+  @UseGuards(AdminGuard)
   @ApiQuery({ name: 'title', required: false })
   list(
     @Query('page', ParseIntPipe) page: number,
@@ -50,6 +54,7 @@ export class DocumentsController {
   }
 
   @Patch(':id')
+  @UseGuards(AdminGuard)
   update(
     @Param('id') id: string,
     @Body() updateDocumentDto: UpdateDocumentDto,
@@ -58,6 +63,7 @@ export class DocumentsController {
   }
 
   @Delete(':id')
+  @UseGuards(AdminGuard)
   remove(@Param('id') id: string) {
     return this.documentsService.remove(id);
   }

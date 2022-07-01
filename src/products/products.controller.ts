@@ -11,6 +11,7 @@ import {
   ParseUUIDPipe,
   ParseBoolPipe,
   ParseArrayPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -18,6 +19,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { onChainStatus, SupportType } from '../common/const';
 import { string } from 'joi';
+import { AdminGuard } from '../auth/guards/admin.guard';
 
 @ApiTags('藏品系列')
 @Controller('products')
@@ -31,12 +33,13 @@ export class ProductsController {
   //   return this.productsService.create(createProductDto);
   // }
 
-  @Get()
-  findAll() {
-    return this.productsService.findAll();
-  }
+  // @Get()
+  // findAll() {
+  //   return this.productsService.findAll();
+  // }
 
   @Get('/query')
+  @UseGuards(AdminGuard)
   listWithQuery(
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
@@ -80,6 +83,7 @@ export class ProductsController {
   }
 
   @Patch('/setVisibility/:product_id')
+  @UseGuards(AdminGuard)
   setVisibility(@Param('product_id') product_id: string, @Query('visibility', ParseBoolPipe) visibility: boolean) {
     return this.productsService.setVisibility(product_id, visibility)
   }
@@ -99,6 +103,7 @@ export class ProductsController {
   }
 
   @Patch(':id')
+  @UseGuards(AdminGuard)
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateProductDto: UpdateProductDto,
@@ -107,6 +112,7 @@ export class ProductsController {
   }
 
   @Delete(':id')
+  @UseGuards(AdminGuard)
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.remove(id);
   }

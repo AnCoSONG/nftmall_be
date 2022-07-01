@@ -17,6 +17,7 @@ import { UpdateProductItemDto } from './dto/update-product-item.dto';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CollectorId } from '../decorators';
 import { JwtGuard } from '../auth/guards/jwt.guard';
+import { AdminGuard } from '../auth/guards/admin.guard';
 
 @ApiTags('藏品')
 @Controller('product-items')
@@ -29,15 +30,16 @@ export class ProductItemsController {
   //   return this.productItemsService.create(createProductItemDto);
   // }
 
-  @Get()
-  findAll(@Query('with_relation') with_relation: boolean) {
-    return this.productItemsService.findAll(with_relation);
-  }
+  // @Get()
+  // findAll(@Query('with_relation') with_relation: boolean) {
+  //   return this.productItemsService.findAll(with_relation);
+  // }
 
   @Get('/query')
   @ApiQuery({ name: 'id', required: false })
   @ApiQuery({ name: 'product_id', required: false })
   @ApiQuery({ name: 'owner', required: false })
+  @UseGuards(AdminGuard)
   query(
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
@@ -100,6 +102,7 @@ export class ProductItemsController {
   }
 
   @Get(':id')
+  @UseGuards(JwtGuard)
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @Query('with_relation') with_relation: boolean,
@@ -108,6 +111,7 @@ export class ProductItemsController {
   }
 
   @Patch(':id')
+  @UseGuards(AdminGuard)
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateProductItemDto: UpdateProductItemDto,
@@ -116,6 +120,7 @@ export class ProductItemsController {
   }
 
   @Delete(':id')
+  @UseGuards(AdminGuard)
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.productItemsService.remove(id);
   }

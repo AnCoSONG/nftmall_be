@@ -18,6 +18,7 @@ import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { onChainStatus, PaymentStatus } from '../common/const';
 import { CollectorId } from '../decorators';
 import { JwtGuard } from '../auth/guards/jwt.guard';
+import { AdminGuard } from '../auth/guards/admin.guard';
 
 @ApiTags('订单')
 @Controller('orders')
@@ -30,10 +31,10 @@ export class OrdersController {
   //   return this.ordersService.create(createOrderDto);
   // }
 
-  @Get()
-  findAll() {
-    return this.ordersService.findAll();
-  }
+  // @Get()
+  // findAll() {
+  //   return this.ordersService.findAll();
+  // }
 
   // @Get('/list')
   // list(
@@ -48,6 +49,7 @@ export class OrdersController {
   @ApiQuery({name: 'id', required: false})
   @ApiQuery({name: 'trade_no', required: false})
   @ApiQuery({name: 'buyer_id', required: false})
+  @UseGuards(AdminGuard)
   query(
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
@@ -77,6 +79,7 @@ export class OrdersController {
   }
 
   @Get('/byTradeNo')
+  @UseGuards(AdminGuard)
   findByTradeNo(
     @Query('trade_no') trade_no: string,
     @Query('with_relation') with_relation: boolean,
@@ -110,6 +113,7 @@ export class OrdersController {
   }
 
   @Get(':id')
+  @UseGuards(JwtGuard)
   findOne(
     @Param('id') id: string,
     @Query('with_relation', ParseBoolPipe) with_relation: boolean,
@@ -118,11 +122,13 @@ export class OrdersController {
   }
 
   @Patch(':id')
+  @UseGuards(AdminGuard)
   update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
     return this.ordersService.update(id, updateOrderDto);
   }
 
   @Delete(':id')
+  @UseGuards(AdminGuard)
   remove(@Param('id') id: string) {
     return this.ordersService.remove(id);
   }

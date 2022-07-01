@@ -8,6 +8,7 @@ import {
   Delete,
   UsePipes,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { NoticesService } from './notices.service';
 import { CreateNoticeDto } from './dto/create-notice.dto';
@@ -18,6 +19,7 @@ import {
   UpdateNoticeSchema,
 } from './schemas/notices.schema';
 import { JoiValidationPipe } from '../pipes/joi-validation.pipe';
+import { AdminGuard } from '../auth/guards/admin.guard';
 
 @ApiTags('公告')
 @Controller('notices')
@@ -25,6 +27,7 @@ export class NoticesController {
   constructor(private readonly noticesService: NoticesService) {}
 
   @Post()
+  @UseGuards(AdminGuard)
   @UsePipes(new JoiValidationPipe(CreateNoticeSchema))
   create(@Body() createNoticeDto: CreateNoticeDto) {
     return this.noticesService.create(createNoticeDto);
@@ -42,6 +45,7 @@ export class NoticesController {
 
   @Patch(':id')
   @UsePipes(new JoiValidationPipe(UpdateNoticeSchema))
+  @UseGuards(AdminGuard)
   update(
     @Param('id', ParseIntPipe) id: string,
     @Body() updateNoticeDto: UpdateNoticeDto,
@@ -50,6 +54,7 @@ export class NoticesController {
   }
 
   @Delete(':id')
+  @UseGuards(AdminGuard)
   remove(@Param('id', ParseIntPipe) id: string) {
     return this.noticesService.remove(+id);
   }

@@ -13,6 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { AdminGuard } from '../auth/guards/admin.guard';
 import { JwtGuard } from '../auth/guards/jwt.guard';
 import { CollectorId } from '../decorators';
 import { JoiValidationPipe } from '../pipes/joi-validation.pipe';
@@ -34,17 +35,20 @@ export class CollectorsController {
   constructor(private readonly collectorsService: CollectorsService) {}
 
   @Post()
+  @UseGuards(AdminGuard)
   @UsePipes(new JoiValidationPipe(CreateCollectorSchema))
   create(@Body() createCollectorDto: CreateCollectorDto) {
     return this.collectorsService.create(createCollectorDto);
   }
 
   @Get()
+  @UseGuards(AdminGuard)
   findAll(@Query('with_relation') with_relation: boolean) {
     return this.collectorsService.findAll(with_relation);
   }
 
   @Get('/list')
+  @UseGuards(AdminGuard)
   list(
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
@@ -66,6 +70,7 @@ export class CollectorsController {
   }
 
   @Post('/createBsnAccount/:id')
+  @UseGuards(AdminGuard)
   async applyForChain(@Param('id', ParseIntPipe) id: string) {
     return await this.collectorsService.applyForChain(+id);
   }
@@ -140,6 +145,7 @@ export class CollectorsController {
   }
 
   @Patch('/update')
+  @UsePipes(new JoiValidationPipe(UpdateCollectorSchema))
   updateBySelf(
     @CollectorId() id: number,
     @Body() updateCollectorDto: UpdateCollectorDto,

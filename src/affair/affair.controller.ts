@@ -22,6 +22,7 @@ import { DrawDto, PayDto, SeckillDto, WxCallbackDto } from './common.dto';
 import { CollectorId } from '../decorators';
 import { JwtGuard } from '../auth/guards/jwt.guard';
 import { IncrementProductDto } from '../products/dto/increment-product.dto';
+import { AdminGuard } from '../auth/guards/admin.guard';
 
 @ApiTags('事务')
 @Controller('affair')
@@ -30,6 +31,7 @@ export class AffairController {
 
   // 发布藏品, <谁>发布一个<什么>产品
   @Post('/publish/:publisher_id')
+  @UseGuards(AdminGuard)
   publish(
     @Param('publisher_id') publisher_id: string,
     @Body() createProductDto: CreateProductDto,
@@ -38,6 +40,7 @@ export class AffairController {
   }
 
   @Post('/increment/:product_id')
+  @UseGuards(AdminGuard)
   increment_publish(
     @Param('product_id') product_id: string,
     @Body() incrementProductDto: IncrementProductDto,
@@ -53,6 +56,7 @@ export class AffairController {
   }
 
   @Post('/sendGift/:product_id')
+  @UseGuards(AdminGuard)
   sendGift(@Param('product_id') product_id: string, @Query('collector_id', ParseIntPipe) collector_id: number) {
     return this.affairService.send_product_item_to_collector(product_id, collector_id)
   }
@@ -66,18 +70,21 @@ export class AffairController {
   // }
 
   @Post('/syncStock/:product_id')
+  @UseGuards(AdminGuard)
   syncStock(@Param('product_id') product_id: string) {
     return this.affairService.sync_stock(product_id);
   }
 
   //! remove in prod
   @Delete('destory/:product_id')
+  @UseGuards(AdminGuard)
   destory(@Param('product_id') product_id: string) {
     //! danger method, delete a product and all cache related to it
     return this.affairService.destory(product_id);
   }
 
   @Post('clear')
+  @UseGuards(AdminGuard)
   clearSeckillCache(@Query('product_id') product_id: string) {
     return this.affairService.clearSeckillCache(product_id);
   }
@@ -99,6 +106,7 @@ export class AffairController {
   }
 
   @Post('/pay')
+  @UseGuards(JwtGuard)
   pay(@Req() req: FastifyRequest, @Body() payDto: PayDto) {
     return this.affairService.pay(
       payDto.order_id,
@@ -109,6 +117,7 @@ export class AffairController {
   }
 
   @Get('/queryPayment')
+  @UseGuards(JwtGuard)
   queryPayment(@Query('trade_no') trade_no: string) {
     return this.affairService.fetch_payment_result(trade_no);
   }
@@ -135,16 +144,19 @@ export class AffairController {
   }
 
   @Post('/manual_createNftForProductItem/:order_id')
+  @UseGuards(AdminGuard)
   create_nft_for_product_item(@Param('order_id') order_id: string) {
     return this.affairService.create_nft_for_product_item(order_id);
   }
 
   @Post('/manual_createNftClassForProduct/:product_id')
+  @UseGuards(AdminGuard)
   create_nft_class_for_product(@Param('product_id') product_id: string) {
     return this.affairService.create_nft_class_id_for_product(product_id);
   }
 
   @Post('/manual_genLuckySet')
+  @UseGuards(AdminGuard)
   gen_lucky_set(
     @Query('product_id') product_id: string,
     @Query('count', ParseIntPipe) count: number,
@@ -156,16 +168,19 @@ export class AffairController {
   }
 
   @Get('/isLuckySetGen')
+  @UseGuards(AdminGuard)
   is_lucky_set_gen(@Query('product_id') product_id: string) {
     return this.affairService.is_lucky_set_gen(product_id);
   }
 
   @Get('/getDrawSetCount')
+  @UseGuards(AdminGuard)
   get_lucky_set_count(@Query('product_id') product_id: string) {
     return this.affairService.get_draw_set_count(product_id);
   }
 
   @Post('/sim_paymentComplete')
+  @UseGuards(AdminGuard)
   payment_complete(
     @Query('order_id') order_id: string,
     @Query('out_trade_id') out_trade_id: string,

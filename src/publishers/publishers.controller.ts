@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   UsePipes,
   ParseBoolPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { PublishersService } from './publishers.service';
 import { CreatePublisherDto } from './dto/create-publisher.dto';
@@ -21,6 +22,7 @@ import {
   CreatePublisherSchema,
   UpdatePublisherSchema,
 } from './schemas/publishers.schema';
+import { AdminGuard } from '../auth/guards/admin.guard';
 
 @ApiTags('创作者/发行方')
 @Controller('publishers')
@@ -29,32 +31,41 @@ export class PublishersController {
 
   @Post()
   @UsePipes(new JoiValidationPipe(CreatePublisherSchema))
+  @UseGuards(AdminGuard)
   create(@Body() createPublisherDto: CreatePublisherDto) {
     return this.publishersService.create(createPublisherDto);
   }
 
-  @Get()
-  findAll() {
-    return this.publishersService.findAll();
-  }
+  // @Get()
+  // findAll() {
+  //   return this.publishersService.findAll();
+  // }
 
   @Get('/list')
+  @UseGuards(AdminGuard)
   list(
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
     @Query('with_relation', ParseBoolPipe) with_relation: boolean,
     @Query('id') id: string,
-    @Query('name') name: string
+    @Query('name') name: string,
   ) {
     return this.publishersService.list(page, limit, with_relation, id, name);
   }
 
+  // 发行藏品时的搜索框
   @Get('/query')
-  query(@Query('limit', ParseIntPipe) limit: number, @Query('with_relation', ParseBoolPipe) with_relation: boolean, @Query('name') name: string) {
-    return this.publishersService.query(limit, with_relation, name)
+  @UseGuards(AdminGuard)
+  query(
+    @Query('limit', ParseIntPipe) limit: number,
+    @Query('with_relation', ParseBoolPipe) with_relation: boolean,
+    @Query('name') name: string,
+  ) {
+    return this.publishersService.query(limit, with_relation, name);
   }
 
   @Get(':id')
+  @UseGuards(AdminGuard)
   findOne(
     @Query('only_works', ParseBoolPipe) only_works: boolean,
     @Param('id') id: string,
@@ -80,6 +91,7 @@ export class PublishersController {
   // }
 
   @Patch(':id')
+  @UseGuards(AdminGuard)
   @UsePipes(new JoiValidationPipe(UpdatePublisherSchema))
   update(
     @Param('id') id: string,
@@ -89,6 +101,7 @@ export class PublishersController {
   }
 
   @Delete(':id')
+  @UseGuards(AdminGuard)
   remove(@Param('id') id: string) {
     return this.publishersService.remove(id);
   }
