@@ -86,14 +86,16 @@ export class AffairService {
     return redisSetupRes;
   }
 
-  __publish_setup_draw_end_timeout(
+  async __publish_setup_draw_end_timeout(
     product_id: string,
     draw_count: number,
     draw_end_timestamp: string | Date,
   ) {
     // todo: 服务重启后也应能正确完成
-    this.logger.log(`gen lucky set job queued! ${product_id} ${draw_count} ${draw_end_timestamp}`)
-    this.affairQueue.add(
+    this.logger.log(
+      `gen lucky set job queued! ${product_id} ${draw_count} ${draw_end_timestamp}`,
+    );
+    const job = await this.affairQueue.add(
       'gen-lucky-set',
       {
         product_id,
@@ -105,6 +107,11 @@ export class AffairService {
           this.dayjsService.dayjsify(draw_end_timestamp).valueOf() -
           this.dayjsService.dayjsify().valueOf(),
       },
+    );
+    // 设置redis key，删除藏品时主动删除该key
+    await this.redis.set(
+      `gen_lucky_set:${product_id}`,
+      job.id
     );
   }
 
@@ -208,6 +215,7 @@ export class AffairService {
     product.draw_timestamp = new Date(draw_timestamp);
     product.draw_end_timestamp = new Date(draw_end_timestamp);
     product.sale_timestamp = new Date(sale_timestamp);
+    product.is_soldout = false; // 防止直接显示已售罄
     // * 创建新藏品
     const increamentalCreateRes = await this.productsService.create(product);
     // * 设置redis
@@ -301,6 +309,7 @@ export class AffairService {
     const createNftClassRes = await this.bsnService.create_nft_class({
       owner: publisher.bsn_address,
       name: `${product.name}@晋元数字`,
+      uri: product.chain_src, // add chain src to nft class
     });
     if (createNftClassRes.code) {
       throw new BadRequestException(
@@ -504,7 +513,17 @@ export class AffairService {
   async destory(product_id: string) {
     // todo: delete nft
     //! this will remove product, product-items that related to product and related order...
+    // 删除藏品
     const removeRes = await this.productsService.remove(product_id);
+    // 清除藏品抽签job
+    const job_id = await this.redis.get(`gen_lucky_set:${product_id}`);
+    if (job_id) {
+      const job = await this.affairQueue.getJob(job_id);
+      if (job) {
+        await job.remove();
+      }
+    }
+    // 清空redis缓存
     const clearRes = await this.clearSeckillCache(product_id);
     return {
       removeRes,
@@ -524,6 +543,7 @@ export class AffairService {
       `seckill:luckyset:${product_id}`,
       `seckill:buyhash:${product_id}`,
       `gift:stock:${product_id}`,
+      `gen_lucky_set:${product_id}`,
     );
     return deleteRes;
   }
@@ -909,7 +929,7 @@ export class AffairService {
       name: `${product_item.product.name}#${product_item.no
         .toString()
         .padStart(4, '0')}@晋元数字#${buyer.id}`, // 不要用名字了，用户ID不会变 // fix 去掉括号
-      uri: product_item.product.preview_img,
+      uri: product_item.product.chain_src, // 链上存储chain_src
       recipient: buyer.bsn_address,
       data: product_item.id, // 将product_item_id作为data存储，后续查询用户名下藏品的流程是: 查链上用户名下藏品，查到data字段
     });

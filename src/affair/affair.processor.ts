@@ -233,4 +233,16 @@ export class AffairProcessor {
   onGenLuckySetActive(job: Job) {
     this.logger.log(`${job.id} - ${job.name} - active!`);
   }
+
+  @OnQueueCompleted({ name: 'gen-lucky-set' })
+  async onGenLuckySetComplete(
+    job: Job<{
+      product_id: string;
+      draw_count: number;
+    }>,
+  ) {
+    this.logger.log(`${job.id} - ${job.name} - complete!`);
+    // 完成后自动删除
+    await this.redis.del(`gen_lucky_set:${job.data.product_id}`);
+  }
 }
