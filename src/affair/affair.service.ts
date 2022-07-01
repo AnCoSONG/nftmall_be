@@ -908,7 +908,7 @@ export class AffairService {
       class_id: product_item.product.nft_class_id,
       name: `${product_item.product.name}#${product_item.no
         .toString()
-        .padStart(4, '0')}@晋元数字#(${buyer.id})`, // 不要用名字了，用户ID不会变
+        .padStart(4, '0')}@晋元数字#${buyer.id}`, // 不要用名字了，用户ID不会变 // fix 去掉括号
       uri: product_item.product.preview_img,
       recipient: buyer.bsn_address,
       data: product_item.id, // 将product_item_id作为data存储，后续查询用户名下藏品的流程是: 查链上用户名下藏品，查到data字段
