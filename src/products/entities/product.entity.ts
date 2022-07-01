@@ -72,6 +72,12 @@ export class Product {
   @Column({type: 'enum', enum: ProductAttribute, default: ProductAttribute.normal})
   attribute: ProductAttribute;
 
+  @Column()
+  chain_src: string;
+
+  @Column({type: 'bool', default: false})
+  is_soldout: boolean;
+
   @VersionColumn({ type: 'smallint', unsigned: true })
   version: number;
 

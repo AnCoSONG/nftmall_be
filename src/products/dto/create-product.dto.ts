@@ -105,7 +105,13 @@ export class CreateProductDto {
     enum: ProductAttribute,
     example: ProductAttribute.normal
   })
-  attribute: ProductAttribute
+  attribute: ProductAttribute;
+
+  @ApiProperty({
+    description: '藏品链上资源',
+    required: true
+  })
+  chain_src: string;
 
   @ApiProperty({
     description: '抽签开始时间',

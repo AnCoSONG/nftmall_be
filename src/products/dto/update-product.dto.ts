@@ -29,4 +29,7 @@ export class UpdateProductDto extends PartialType(CreateProductDto) {
 
   @ApiProperty({ description: '用户可见性' })
   visible?: boolean;
+
+  @ApiProperty({ description: '是否售罄' })
+  is_soldout?: boolean;
 }

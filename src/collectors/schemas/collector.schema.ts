@@ -17,4 +17,6 @@ export const UpdateCollectorSchema = Joi.object({
   real_id: Joi.string(),
   credit: Joi.number(),
   bsn_address: Joi.string(),
+  delivery_address: Joi.string(),
+  wx_openid: Joi.string()
 });
