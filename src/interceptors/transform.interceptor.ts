@@ -38,7 +38,7 @@ export class TransformInterceptor implements NestInterceptor {
             path: '/',
           });
           res.cookie('__xc__', req['user'].data.access_token, {
-            maxAge: Math.floor(ms('30s') / 1000), // same with refresh token
+            maxAge: Math.floor(ms('2d') / 1000), // same with refresh token
             httpOnly: true,
             secure: true,
             path: '/',
