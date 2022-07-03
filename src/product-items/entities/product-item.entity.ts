@@ -18,7 +18,7 @@ export class ProductItem {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'smallint' })
+  @Column({ type: 'int' })
   no: number; // 0 - 999 or 0 - 1999
 
   @Column({ type: 'varchar', length: 255 })
