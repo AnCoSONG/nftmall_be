@@ -675,6 +675,8 @@ export class AffairService {
     } else if (order.payment_status === PaymentStatus.CANCELED) {
       throw new BadRequestException('订单已取消');
     }
+    // 如果找不到就会自动throw
+    await this.productsService.findOne(order.product_item.product_id, false);
     let payRes;
     if (type === 'h5') {
       payRes = await this.wxpay.transactions_h5({
@@ -982,7 +984,7 @@ export class AffairService {
     const order = (await this.ordersService
       .findOne(order_id, true)
       .catch((err) => {
-        this.logger.error('order not fount: ' + err);
+        this.logger.error('order not found: ' + err);
         return null;
       })) as Order | null;
     if (!order) {
