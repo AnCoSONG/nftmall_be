@@ -109,10 +109,7 @@ export class AffairService {
       },
     );
     // 设置redis key，删除藏品时主动删除该key
-    await this.redis.set(
-      `gen_lucky_set:${product_id}`,
-      job.id
-    );
+    await this.redis.set(`gen_lucky_set:${product_id}`, job.id);
   }
 
   /**
@@ -560,27 +557,12 @@ export class AffairService {
     // 资格检查 collector_id in luckyset?
     // 库存检查 decrby/decr 看decr之后数值是否大于等于0，小于0无效
     // 返回减库存之后的值作为用户能购买的no
-    const [collector, product] = await Promise.all([
-      this.collectorService.findOne(collector_id) as Promise<Collector>,
-      this.productsService.findOne(product_id) as Promise<Product>,
-    ]);
+    const product = (await this.productsService.findOne(
+      product_id,
+      false,
+    )) as Product;
     if (!product.nft_class_id) {
-      throw new InternalServerErrorException('product nft_class_id is empty');
-    }
-    if (!collector.bsn_address) {
-      return {
-        code: 5,
-        message: '购买者必须拥有区块链钱包账户',
-      };
-    }
-    if (
-      !(collector.real_name && collector.real_id) &&
-      !collector['is_verified']
-    ) {
-      return {
-        code: 6,
-        message: '购买者必须完成实名认证',
-      };
+      throw new InternalServerErrorException('藏品未上链，请联系工作人员');
     }
     if (
       this.dayjsService.dayjsify() <
@@ -653,6 +635,98 @@ export class AffairService {
         code: 0,
         message: 'seckill success',
         order_id: order.id, // 返回order_id
+      };
+    } else {
+      throw new InternalServerErrorException(
+        'unknown redis seckill error' + seckillRes,
+      );
+    }
+  }
+
+  async seckill_test(collector_id: number, product_id: string) {
+    // lua脚本
+    // 资格检查 collector_id in luckyset?
+    // 库存检查 decrby/decr 看decr之后数值是否大于等于0，小于0无效
+    // 返回减库存之后的值作为用户能购买的no
+
+    const product = (await this.productsService.findOne(
+      product_id,
+      false,
+    )) as Product;
+    if (!product.nft_class_id) {
+      throw new InternalServerErrorException('藏品未上链，请联系工作人员');
+    }
+    if (
+      this.dayjsService.dayjsify() <
+      this.dayjsService.dayjsify(product.sale_timestamp)
+    ) {
+      return {
+        code: 4,
+        message: '还未到时间',
+      };
+    }
+    // const [collector, product] = await Promise.all([
+    //   this.collectorService.findOne(collector_id) as Promise<Collector>,
+    //   this.productsService.findOne(product_id) as Promise<Product>,
+    // ]);
+    // if (!product.nft_class_id) {
+    //   throw new InternalServerErrorException('product nft_class_id is empty');
+    // }
+    // if (!collector.bsn_address) {
+    //   return {
+    //     code: 5,
+    //     message: '购买者必须拥有区块链钱包账户',
+    //   };
+    // }
+    // if (
+    //   !(collector.real_name && collector.real_id) &&
+    //   !collector['is_verified']
+    // ) {
+    //   return {
+    //     code: 6,
+    //     message: '购买者必须完成实名认证',
+    //   };
+    // }
+    // if (
+    //   this.dayjsService.dayjsify() <
+    //   this.dayjsService.dayjsify(product.sale_timestamp)
+    // ) {
+    //   return {
+    //     code: 4,
+    //     message: '还未到时间',
+    //   };
+    // }
+
+    // lua高并发原子化控制
+    // todo: buyhash增加是否应该放在支付完成后
+    // todo: 秒杀脚本优化，增加一个藏品set，记录no：stock=3 => stock = 3 & set(0,1,2); get_stock_count: get stock; return_stock: stock++ & sadd set return_no; buy: stock -- & spop set, return pop value;
+    const seckillRes = await this.redis.seckill(
+      `seckill:luckyset:${product_id}`,
+      `seckill:stock:${product_id}`,
+      `seckill:buyhash:${product_id}`,
+      `seckill:items:${product_id}`,
+      collector_id,
+      product.stock_count,
+    );
+    if (seckillRes == -2) {
+      return {
+        code: 2,
+        message: '该藏品您无权限购买',
+      };
+    } else if (seckillRes == -1) {
+      return {
+        code: 1,
+        message: '藏品已售罄',
+      };
+    } else if (seckillRes == -3) {
+      return {
+        code: 3,
+        message: '已达购买上限',
+      };
+    } else if (seckillRes > 0) {
+      return {
+        code: 0,
+        message: 'seckill success',
       };
     } else {
       throw new InternalServerErrorException(

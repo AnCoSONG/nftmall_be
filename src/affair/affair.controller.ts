@@ -95,6 +95,11 @@ export class AffairController {
     return this.affairService.seckill(collector_id, seckillDto.product_id);
   }
 
+  // @Get('/seckill_test/:collector_id/:product_id')
+  // seckill_test(@Param('collector_id', ParseIntPipe) collector_id: number, @Param('product_id') product_id: string) {
+  //   return this.affairService.seckill_test(collector_id, product_id)
+  // }
+
   @Post('/draw')
   @Throttle(500, 60)
   @UseGuards(JwtGuard, ThrottlerBehindProxyGuard)
