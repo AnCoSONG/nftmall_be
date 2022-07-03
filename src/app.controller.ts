@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AppService } from './app.service';
 import { AdminGuard } from './auth/guards/admin.guard';
@@ -64,6 +64,11 @@ export class AppController {
     // );
     return this.bsnService.get_accounts({ limit: 50 });
     // return this.bsnService.get_accounts();
+  }
+
+  @Post('/create_account')
+  create_account(@Query('name') name: string) {
+    return this.bsnService.create_account(name)
   }
 
   @Get('/get_accounts_history')
