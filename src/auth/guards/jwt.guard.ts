@@ -193,7 +193,7 @@ export class JwtGuard implements CanActivate {
     };
     const id = userdata.id;
     this.logger.debug(
-      `userid: ${userdata.id}, username: ${userdata.username}, userphone: ${userdata.phone}`,
+      `\tuserid: ${userdata.id}, username: ${userdata.username}, userphone: ${userdata.phone}`,
     );
     if (!id) {
       throw new UnauthorizedException('user:unknown uid--CLR');
@@ -281,8 +281,8 @@ export class JwtGuard implements CanActivate {
       const last_cached = await redisExceptionCatcher(
         this.redis.get(`old_token_${userdata.id}`)
       )
-      this.logger.debug('cached refresh token: ' + cached);
-      this.logger.debug('old refresh token: ' + last_cached);
+      this.logger.debug('\tcached refresh token: ' + cached);
+      this.logger.debug('\told refresh token: ' + last_cached);
       if (!cached) {
         // 已下线
         this.logger.debug(
@@ -294,11 +294,12 @@ export class JwtGuard implements CanActivate {
         // 检测到不匹配
         if (last_cached && last_cached === refresh_token) {
           this.logger.debug(
-            `\tuser ${userdata.id}/${request.ip} auth: refresh token matched last token! Continue!`
+            `\tuser ${userdata.id}/${request.ip} auth: refresh token matched last token! Will not refreshed!`
           )
+          return true;
         } else {
           this.logger.debug(
-            `\tuser ${userdata.id}/${request.ip} auth: refresh token cache mismatched!`,
+            `\tuser ${userdata.id}/${request.ip} auth: refresh token mismatched token and last refresh token!`,
           );
           // todo: 清空redis导致正常登录也无法刷新token
           // await redisExceptionCatcher(this.redis.del(`token_${id}`)); // 自动下线
