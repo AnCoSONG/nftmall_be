@@ -23,7 +23,7 @@ export class BannersService {
   async findOne(id: number) {
     const banner = await sqlExceptionCatcher(this.bannerRepository.findOne(id));
     if (!banner) {
-      throw new NotFoundException(`Banner with id ${id} not found`);
+      throw new NotFoundException(`无法找到ID:${id}的轮播图`);
     }
     return banner;
   }

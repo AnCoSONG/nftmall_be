@@ -163,7 +163,7 @@ export class ProductsService {
       }),
     );
     if (!product) {
-      throw new NotFoundException(`Product with ID ${id} not found`);
+      throw new NotFoundException(`无法找到ID:${id}的藏品`);
     }
     return product as Product;
   }
