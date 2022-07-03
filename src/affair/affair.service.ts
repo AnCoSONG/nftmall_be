@@ -198,7 +198,7 @@ export class AffairService {
     draw_end_timestamp: string,
     sale_timestamp: string,
   ) {
-    const product = await this.productsService.findOne(product_id);
+    const product = await this.productsService.findOneWithGenres(product_id);
     if (product.attribute === ProductAttribute.gift) {
       throw new BadRequestException('赠品无法增量发布');
     }

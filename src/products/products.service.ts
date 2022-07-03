@@ -168,6 +168,18 @@ export class ProductsService {
     return product as Product;
   }
 
+  async findOneWithGenres(id: string) {
+    const product = await sqlExceptionCatcher(
+      this.productRepository.findOne(id, {
+        relations: ['genres'],
+      }),
+    );
+    if (!product) {
+      throw new NotFoundException(`无法找到ID:${id}的藏品`);
+    }
+    return product as Product;
+  }
+
   async onChainFail(id: string, operation_id: string) {
     return await this.update(id, {
       on_chain_status: onChainStatus.FAILED,
