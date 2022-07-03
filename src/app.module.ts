@@ -56,13 +56,13 @@ declare module 'ioredis' {
 }
 @Module({
   imports: [
-    LoggerModule.forRoot({
-      pinoHttp: {
-        stream: pino.destination({
-          dest: './index.log'
-        })
-      }
-    }),
+    // LoggerModule.forRoot({
+    //   pinoHttp: {
+    //     stream: pino.destination({
+    //       dest: './index.log'
+    //     })
+    //   }
+    // }),
     ConfigModule.forRoot({
       // .env 也不应该上传，应该根据Github Action动态生成
       envFilePath: ['.env.local', '.env'],
