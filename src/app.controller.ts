@@ -66,10 +66,10 @@ export class AppController {
     // return this.bsnService.get_accounts();
   }
 
-  @Post('/create_account')
-  create_account(@Query('name') name: string) {
-    return this.bsnService.create_account(name)
-  }
+  // @Post('/create_account')
+  // create_account(@Query('name') name: string) {
+  //   return this.bsnService.create_account(name)
+  // }
 
   @Get('/get_accounts_history')
   get_accounts_history(@Query('account') account: string) {
