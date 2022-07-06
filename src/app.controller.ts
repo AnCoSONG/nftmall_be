@@ -32,23 +32,23 @@ export class AppController {
     return this.appService.testRedis();
   }
 
-  @Get('/test')
-  test() {
-    return this.bsnService.create_nft_class({
-      owner: 'iaa1u7gdwe54dz5y0gtw275fl558u0x2c9cju9xryz',
-      name: 'testNFTclass',
-      symbol: 'testsymbol',
-      description: 'testdesc',
-      uri: 'https://www.baidu.com',
-      uri_hash:
-        'bc5c3283cae3c6567656b6a52bd8b31a806da655336169b611ad9ab790581364',
-      data: '12345testdata',
-      tag: {
-        key123: 'testkey1',
-        key234: 'testkey2',
-      },
-    });
-  }
+  // @Get('/test')
+  // test() {
+  //   return this.bsnService.create_nft_class({
+  //     owner: 'iaa1u7gdwe54dz5y0gtw275fl558u0x2c9cju9xryz',
+  //     name: 'testNFTclass',
+  //     symbol: 'testsymbol',
+  //     description: 'testdesc',
+  //     uri: 'https://www.baidu.com',
+  //     uri_hash:
+  //       'bc5c3283cae3c6567656b6a52bd8b31a806da655336169b611ad9ab790581364',
+  //     data: '12345testdata',
+  //     tag: {
+  //       key123: 'testkey1',
+  //       key234: 'testkey2',
+  //     },
+  //   });
+  // }
   @Get('/get_transactions')
   test2(@Query('operation_id') operation_id: string) {
     // return this.bsnService.get_transactions(
