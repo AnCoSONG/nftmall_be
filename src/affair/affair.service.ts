@@ -331,7 +331,7 @@ export class AffairService {
           type: 'exponential',
           delay: 3000,
         },
-        attempts: 30,
+        attempts: 15, // 最长等待27小时
         timeout: 30000,
         // removeOnComplete: true,
       },
@@ -1020,11 +1020,11 @@ export class AffairService {
         operation_id: createNftRes.operation_id,
       },
       {
-        attempts: 10,
+        attempts: 15,
         delay: 3000,
         backoff: {
           type: 'exponential',
-          delay: 4000,
+          delay: 3000,
         },
         timeout: 30000,
       },
