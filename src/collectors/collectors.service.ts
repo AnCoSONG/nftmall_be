@@ -156,7 +156,7 @@ export class CollectorsService {
     const collector = await this.findOne(id);
     if (!collector.bsn_address) {
       const bsnAccount = await this.bsnService.create_account(
-        collector.username,
+        collector.initial_username,
       );
       if (bsnAccount.code) {
         throw new InternalServerErrorException('BSN Error when create account');
