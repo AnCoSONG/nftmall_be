@@ -100,12 +100,14 @@ export class AuthService {
     let newCollector: Collector | null = null;
     if (data.length === 0) {
       // 创建一个
+      const initial_username = `藏家${loginDto.phone.substring(7)}${randomBytes(4).toString(
+        'hex',
+      )}`
       newCollector = await this.collectorService.create({
         phone: loginDto.phone,
+        initial_username,
         // 后4位
-        username: `藏家${loginDto.phone.substring(7)}${randomBytes(4).toString(
-          'hex',
-        )}`,
+        username: initial_username,
         avatar: `https://avatars.dicebear.com/api/pixel-art/${loginDto.phone}.svg`,
       });
       this.logger.debug('新用户: ' + JSON.stringify(newCollector));

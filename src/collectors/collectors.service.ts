@@ -47,13 +47,14 @@ export class CollectorsService {
       if (count === 0) {
         isDuplicated = false;
         createCollectorDto.username = newName;
+        createCollectorDto.initial_username = newName;
       } else {
         continue;
       }
     }
     const collector = this.collectorRepository.create(createCollectorDto);
     const createAccountRes = await this.bsnService.create_account(
-      collector.username,
+      collector.initial_username
     );
     if (createAccountRes.code) {
       throw new InternalServerErrorException('Error when create bsn account');

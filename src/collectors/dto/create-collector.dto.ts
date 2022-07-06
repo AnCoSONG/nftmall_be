@@ -1,6 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateCollectorDto {
+
+  @ApiProperty({ description: '初始用户名', example: 'test'})
+  initial_username: string;
+  
   @ApiProperty({ description: '用户名', example: 'admin' })
   username: string;
 
