@@ -760,7 +760,7 @@ export class AffairService {
         attach: order.id, // 附加数据存放order.id
         time_expire: this.dayjsService.time_expire('m', 11),
         amount: {
-          total: parseFloat(order.sum_price) * 100,
+          total: Math.round(parseFloat(order.sum_price) * 100), // fix: 金额问题
           currency: 'CNY',
         },
         scene_info: {
