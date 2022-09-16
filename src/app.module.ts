@@ -79,7 +79,8 @@ declare module 'ioredis' {
         password: configService.get('database.password'),
         database: configService.get('database.database'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: process.env.NODE_ENV === 'dev',
+        // synchronize: process.env.NODE_ENV === 'dev', // 不要动表结构
+        synchronize: false,
       }),
       inject: [ConfigService],
     }),
