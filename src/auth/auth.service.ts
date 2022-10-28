@@ -95,9 +95,9 @@ export class AuthService {
   // 验证是否匹配
   async validateCode(phone: string, code: string) {
     // debug
-    if (code === '123456') {
-      return true;
-    }
+    // if (code === '123456') {
+    //   return true;
+    // }
     // debug
     const res = await redisExceptionCatcher(this.redis.get(phone));
     if (!res) {
