@@ -124,7 +124,7 @@ export class ProductItemsService {
     if (!product_item) {
       throw new NotFoundException(`Product Item with ID ${id} not found`);
     }
-    if (product_item) return product_item;
+    return product_item as ProductItem;
   }
 
   async findOneByUser(id: string, collector_id: string, with_relation = false) {
@@ -139,7 +139,7 @@ export class ProductItemsService {
     if (!product_item) {
       throw new NotFoundException(`Product Item with ID ${id} not found`);
     }
-    if (product_item) return product_item;
+    return product_item as ProductItem;
   }
 
   async findOneByProductIdAndNo(
