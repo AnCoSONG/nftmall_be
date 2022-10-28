@@ -12,6 +12,8 @@ export default () => {
       host: process.env.REDIS_HOST,
       port: process.env.REDIS_PORT,
       password: process.env.REDIS_PASSWORD,
+      queue_db: process.env.REDIS_QUEUE_DB,
+      cache_db: process.env.REDIS_CACHE_DB
     },
     jwt: {
       access_cookie_name: process.env.JWT_ACCESS_COOKIE_NAME,
