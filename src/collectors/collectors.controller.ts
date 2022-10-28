@@ -129,6 +129,7 @@ export class CollectorsController {
   }
 
   @Post('/addCredit')
+  @UseGuards(AdminGuard)
   addCredit(
     @Query('id', ParseIntPipe) id: number,
     @Query('credit', ParseIntPipe) credit: number,
@@ -146,6 +147,7 @@ export class CollectorsController {
 
   @Patch('/update')
   @UsePipes(new JoiValidationPipe(UpdateCollectorSchema))
+  @UseGuards(JwtGuard)
   updateBySelf(
     @CollectorId() id: number,
     @Body() updateCollectorDto: UpdateCollectorDto,
@@ -155,6 +157,7 @@ export class CollectorsController {
   
   @Patch(':id')
   @UsePipes(new JoiValidationPipe(UpdateCollectorSchema))
+  @UseGuards(AdminGuard)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCollectorDto: UpdateCollectorDto,
@@ -163,6 +166,7 @@ export class CollectorsController {
   }
 
   @Delete(':id')
+  @UseGuards(AdminGuard)
   remove(@Param('id') id: number) {
     return this.collectorsService.remove(id);
   }
