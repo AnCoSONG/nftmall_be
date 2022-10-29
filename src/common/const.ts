@@ -30,6 +30,32 @@ export enum onChainStatus {
   PENDING = 'pending', // 待上链
 }
 
+export enum transferStatus {
+  SUCCESS = 'success', // 成功
+  PROCESSING = 'processing', // 处理中
+  FAILED = 'failed', // 转赠失败
+  PENDING = 'pending', // 待处理
+}
+
+export enum productItemStatus {
+  DEFAULT = 'default',
+  LOCKED = 'locked',
+  TRANSFERED = 'transfered'
+}
+
+export enum productItemSource  {
+  TBD = 'TBD',
+  BUY = 'BUY',
+  PLATFORM_GIFT = 'PLATFORM_GIFT',
+  TRANSFER = 'TRANSFER'
+}
+
+export enum transferLaunchType {
+  USER = 'user',
+  DINGBLOCK = 'dingblock',
+  OTHER = 'other'
+}
+
 export const phoneReg =
   /^1(3\d|4[5-9]|5[0-35-9]|6[2567]|7[0-8]|8\d|9[0-35-9])\d{8}$/;
 

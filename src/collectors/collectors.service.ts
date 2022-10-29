@@ -19,6 +19,7 @@ import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { randomBytes } from 'crypto';
 import Redis from 'ioredis';
 import { CryptoJsService } from '../lib/crypto-js/crypto-js.service';
+import { productItemStatus } from '../common/const';
 @Injectable()
 export class CollectorsService {
   private readonly logger = new Logger(CollectorsService.name);
@@ -66,7 +67,7 @@ export class CollectorsService {
   async findAll(with_relation = false) {
     return await sqlExceptionCatcher(
       this.collectorRepository.find({
-        relations: with_relation ? ['orders', 'collections'] : [],
+        relations: with_relation ? ['orders', 'collections', 'send_transfers', 'receive_transfers'] : [],
       }),
     );
   }
@@ -90,7 +91,7 @@ export class CollectorsService {
   async findOne(id: number, with_relation = false) {
     const collector = await sqlExceptionCatcher(
       this.collectorRepository.findOne(id, {
-        relations: with_relation ? ['orders', 'collections'] : [],
+        relations: with_relation ? ['orders', 'collections', 'send_transfers', 'receive_transfers'] : [],
       }),
     );
     if (!collector) {
@@ -177,7 +178,19 @@ export class CollectorsService {
 
   async getCollections(id: number) {
     const collector = await this.findOne(id, true);
-    return collector.collections;
+    return collector.collections.filter((item) => {
+      return item.status !== productItemStatus.TRANSFERED;
+    });
+  }
+
+  async getSendTransfers(id: number) {
+    const collector = await this.findOne(id, true)
+    return collector.send_transfers;
+  }
+
+  async getReceiveTransfers(id: number) {
+    const collector = await this.findOne(id, true)
+    return collector.receive_transfers;
   }
 
   async isIdCheck(id: number) {

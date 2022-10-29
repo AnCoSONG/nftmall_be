@@ -1,5 +1,5 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { onChainStatus } from '../../common/const';
+import { onChainStatus, productItemSource, productItemStatus } from '../../common/const';
 import { CreateProductItemDto } from './create-product-item.dto';
 
 export class UpdateProductItemDto extends PartialType(CreateProductItemDto) {
@@ -23,4 +23,7 @@ export class UpdateProductItemDto extends PartialType(CreateProductItemDto) {
 
   @ApiProperty({ example: new Date() })
   on_chain_timestamp?: Date;
+
+  @ApiProperty({ example: productItemStatus.DEFAULT })
+  status?: productItemStatus;
 }

@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
-import { onChainStatus } from '../common/const';
+import { Like, Not, Repository } from 'typeorm';
+import { onChainStatus, productItemStatus } from '../common/const';
 import { sqlExceptionCatcher } from '../common/utils';
 import { requestKeyErrorException } from '../exceptions';
 import { ProductsService } from '../products/products.service';
@@ -100,6 +100,7 @@ export class ProductItemsService {
           : [],
         where: {
           owner_id: collector_id,
+          status: Not(productItemStatus.TRANSFERED),
         },
         skip: (page - 1) * limit,
         take: limit,

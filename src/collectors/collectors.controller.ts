@@ -64,8 +64,9 @@ export class CollectorsController {
     });
   }
 
-  @Get('/:id/collections')
-  async getCollections(@Param('id', ParseIntPipe) id: string) {
+  @Get('/collections')
+  @UseGuards(JwtGuard)
+  async getCollections(@CollectorId() id: number) {
     return await this.collectorsService.getCollections(+id);
   }
 

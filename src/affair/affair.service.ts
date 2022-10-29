@@ -19,6 +19,9 @@ import {
   onChainStatus,
   PaymentStatus,
   ProductAttribute,
+  productItemSource,
+  productItemStatus,
+  transferLaunchType,
 } from '../common/const';
 import { redisExceptionCatcher, sqlExceptionCatcher } from '../common/utils';
 import { DayjsService } from '../lib/dayjs/dayjs.service';
@@ -36,6 +39,7 @@ import { WxCallbackDto } from './common.dto';
 import { ConfigService } from '@nestjs/config';
 import { boolean } from 'joi';
 import { Publisher } from '../publishers/entities/publisher.entity';
+import { ProductItemTransferService } from '../product-item-transfer/product-item-transfer.service';
 
 @Injectable()
 export class AffairService {
@@ -50,6 +54,7 @@ export class AffairService {
     private readonly dayjsService: DayjsService,
     private readonly schedulerRegistry: SchedulerRegistry,
     private readonly ordersService: OrdersService,
+    private readonly productItemTransferService: ProductItemTransferService,
     @InjectRedis() private readonly redis: Redis,
     @Inject(WXPAY_SYMBOL) private readonly wxpay: WXPAY,
     private readonly configService: ConfigService,
@@ -256,6 +261,7 @@ export class AffairService {
       product_id: product_id,
       no: no,
       owner_id: collector_id,
+      source: productItemSource.PLATFORM_GIFT
     });
     // 上链
     const operation_id = await this._create_nft_for_product_item(
@@ -616,6 +622,7 @@ export class AffairService {
       const product_item = await this.productItemsService.create({
         product_id: product_id,
         no: seckillRes,
+        source: productItemSource.BUY
       });
       const order = await this.ordersService.create({
         product_item_id: product_item.id,
@@ -1120,5 +1127,99 @@ export class AffairService {
     return await redisExceptionCatcher(
       this.redis.scard(`seckill:drawset:${product_id}`),
     );
+  }
+
+  async transfer_nft(sender_id: number, receiver_id: number, product_item_id: string, launch_type: transferLaunchType) {
+    const sender = await this.collectorService.findOne(sender_id, false)
+    const receiver = await this.collectorService.findOne(receiver_id, false)
+    const productItem = await this.productItemsService.findOne(product_item_id, false);
+    if (!sender.bsn_address) {
+      throw new BadRequestException(`sender ${sender.id} has no bsn address`)
+    }
+    if (!receiver.bsn_address) {
+      throw new BadRequestException(`receiver ${receiver.id} has no bsn address`)
+    }
+    if (sender.bsn_address === receiver.bsn_address) {
+      throw new BadRequestException(`sender and receiver are the same`)
+    }
+    if (!productItem.nft_class_id) {
+      throw new BadRequestException(`product item id ${productItem.id} has no nft class id`)
+    }
+    if (!productItem.nft_id) {
+      throw new BadRequestException(`product item id ${productItem.id} has no nft class id`)
+    }
+    if (productItem.owner_id !== sender.id) {
+      throw new BadRequestException(`product item id ${productItem.id} is not owned by sender`)
+    }
+    if (productItem.status === productItemStatus.LOCKED || productItem.status === productItemStatus.TRANSFERED) {
+      throw new BadRequestException(`product item id ${productItem.id} is locked or transfered`)
+    }
+
+    return await this.main_transfer_nft(
+      sender,
+      receiver,
+      productItem,
+      launch_type,
+    )
+  }
+
+  async main_transfer_nft(sender: Collector, receiver: Collector, productItem: ProductItem, launch_type: transferLaunchType) {
+
+    // todo: 转赠表增加一条记录 转赠人，被转赠人，转赠藏品id，转赠藏品品nft_id，藏品系列nft_class_id，藏品序号，操作id，转赠状态（待处理，已处理，已成功），转赠到达后新藏品id（数据库内），转赠交易哈希，转赠成功时间
+    
+    // 添加一条转赠记录
+    const transfer_item = await this.productItemTransferService.create({
+      sender_id: sender.id,
+      receiver_id: receiver.id,
+      nft_id: productItem.nft_id,
+      nft_class_id: productItem.nft_class_id,
+      original_product_item_id: productItem.id,
+      launch_type: launch_type
+    })
+
+    this.logger.log('添加转赠表结果：' + JSON.stringify(transfer_item))
+
+    // 将旧藏品锁定
+    const lockRes = await this.productItemsService.update(productItem.id, {
+      status: productItemStatus.LOCKED,
+    })
+
+    // 调用文昌链转赠接口
+    const transfer_nft_res = await this.bsnService.transfer_nft(productItem.nft_class_id, sender.bsn_address, productItem.nft_id, receiver.bsn_address)
+    this.logger.log('BSN转赠事务提交结果：' + JSON.stringify(transfer_nft_res))
+    if (transfer_nft_res.code) {
+      throw new InternalServerErrorException('bsnService transfeer nft failed...');
+    }
+    // 将轮询结果任务加入队列
+    this.affairQueue.add('update-transfer-nft-status', {
+      product_item_transfer_id: transfer_item.id,
+      operation_id: transfer_nft_res.operation_id,
+      old_product_item: productItem,
+      receiver_id: receiver.id
+    }, {
+      delay: 3000,
+      backoff: {
+        // 3, 6, 12, 24, 48, 96, 192 ...
+        type: 'exponential',
+        delay: 3000,
+      },
+      attempts: 15, // 最长等待27小时
+      timeout: 30000,
+      // removeOnComplete: true,
+    })
+    return transfer_nft_res.operation_id;
+
+
+    // todo: 加入队列进行轮询，成功后执行后续逻辑 done!
+    // * 1. product_item 状态设置为已转赠（包括，默认，已锁定，已转赠）
+    // todo: 为product_item增加状态字段、来源字段（购买、平台赠送、交易转赠）
+    // * 2. 创建一个新的product item，保有同样的名称，class_id和no，链上相关数据来自转赠结果（操作id，钱包地址，nft_id，交易哈希=转赠哈希，上链时间=转赠成功时间，上链状态
+    // todo: 修改productItem findOne系列，不返回已转赠状态的藏品
+    // * 3. 转赠表更新状态，更新新藏品的数据库id，转赠哈希，转赠成功时间，
+    // 
+    // ? 1. 转赠人将无法查询到赠出的藏品（无法获取已转赠的藏品）
+    // ? 2. 转赠人可以看到转赠记录
+    // ? 3. 被转赠人可以看到自己多了一个来源为转赠的藏品，也可以看到转赠记录
+    // ? 4. 双方都可以根据被转赠的nft_id来查看该藏品的转赠记录
   }
 }

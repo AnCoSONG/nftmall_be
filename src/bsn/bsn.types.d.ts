@@ -95,6 +95,7 @@ export type GetAccountsHistoryRes = {
 export type GetTransactionRes = {
   type: string;
   tx_hash: string;
+  module: "nft" | 'mt';
   status: 0 | 1 | 2 | 3;
   timestamp: string,
   class_id?: string;

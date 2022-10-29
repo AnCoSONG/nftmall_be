@@ -31,6 +31,7 @@ import { ThrottlerStorageRedisService } from 'nestjs-throttler-storage-redis';
 import { AliModule } from './ali/ali.module';
 import { DocumentsModule } from './documents/documents.module';
 import { LoggerModule } from 'nestjs-pino';
+import { ProductItemTransferModule } from './product-item-transfer/product-item-transfer.module';
 import pino from 'pino';
 
 declare module 'ioredis' {
@@ -156,6 +157,7 @@ declare module 'ioredis' {
     ScheduleModule.forRoot(),
     AliModule,
     DocumentsModule,
+    ProductItemTransferModule,
   ],
   controllers: [AppController],
   providers: [AppService],

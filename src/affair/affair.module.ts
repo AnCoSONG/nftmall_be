@@ -6,6 +6,7 @@ import { BsnModule } from '../bsn/bsn.module';
 import { CollectorsModule } from '../collectors/collectors.module';
 import { LibModule } from '../lib/lib.module';
 import { OrdersModule } from '../orders/orders.module';
+import { ProductItemTransferModule } from '../product-item-transfer/product-item-transfer.module';
 import { ProductItemsModule } from '../product-items/product-items.module';
 import { ProductsModule } from '../products/products.module';
 import { PublishersModule } from '../publishers/publishers.module';
@@ -23,6 +24,7 @@ import { AffairService } from './affair.service';
     ProductItemsModule,
     ConfigModule,
     CollectorsModule,
+    ProductItemTransferModule,
     BullModule.registerQueue({ name: 'affair' }),
   ],
   controllers: [AffairController],
