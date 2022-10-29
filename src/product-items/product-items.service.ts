@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Not, Repository } from 'typeorm';
-import { onChainStatus, productItemStatus } from '../common/const';
+import { onChainStatus, ProductAttribute, productItemSource, productItemStatus } from '../common/const';
 import { sqlExceptionCatcher } from '../common/utils';
 import { requestKeyErrorException } from '../exceptions';
 import { ProductsService } from '../products/products.service';
@@ -11,6 +11,27 @@ import { ProductItem } from './entities/product-item.entity';
 
 @Injectable()
 export class ProductItemsService {
+  async batch_job(count: number) {
+    // 对每个product item，如果source为TBD，就检查product是否属于赠品，如果是，就设置source为PLATFORM_GIFT，否则设置为BUY
+    const product_items = await this.productItemRepository.find({
+      where: { source: productItemSource.TBD },
+      relations: ['product'],
+    });
+    const iter = Math.min(count, product_items.length);
+    for (let i = 0; i < iter; i ++) {
+      // const startTime = new Date().getTime();
+      if (product_items[i].product.attribute === ProductAttribute.gift) {
+        product_items[i].source = productItemSource.PLATFORM_GIFT;
+      } else {
+        product_items[i].source = productItemSource.BUY;
+      }
+      await this.productItemRepository.save(product_items[i]);
+      // const endTime = new Date().getTime();
+      // this.logger.log(`init product item ${i} cost ${endTime - startTime} ms`);
+    }
+    return true;
+
+  }
   private readonly logger = new Logger(ProductItemsService.name);
   constructor(
     @InjectRepository(ProductItem)
