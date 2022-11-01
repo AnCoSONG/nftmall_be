@@ -1,7 +1,13 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Not, Repository } from 'typeorm';
-import { onChainStatus, ProductAttribute, productItemSource, productItemStatus } from '../common/const';
+import {
+  onChainStatus,
+  ProductAttribute,
+  productItemSource,
+  productItemStatus,
+  transferStatus,
+} from '../common/const';
 import { sqlExceptionCatcher } from '../common/utils';
 import { requestKeyErrorException } from '../exceptions';
 import { ProductsService } from '../products/products.service';
@@ -11,6 +17,25 @@ import { ProductItem } from './entities/product-item.entity';
 
 @Injectable()
 export class ProductItemsService {
+  async findAllByUser(collectorId: number) {
+    const res = await sqlExceptionCatcher(
+      this.productItemRepository
+        .createQueryBuilder('productItem')
+        .where({
+          owner_id: collectorId,
+          status: Not(productItemStatus.TRANSFERED),
+        })
+        .leftJoin('productItem.product', 'product')
+        .select(['productItem.id', 'productItem.no', 'productItem.status', 'product.name'])
+        .getMany(),
+    ) as {id: string, no: number, status: productItemStatus, product: {name: string}}[];
+    return res.map(item => ({
+      id: item.id,
+      name: item.product.name + '#' + item.no,
+      status: item.status,
+    }))
+    
+  }
   async batch_job(count: number) {
     // 对每个product item，如果source为TBD，就检查product是否属于赠品，如果是，就设置source为PLATFORM_GIFT，否则设置为BUY
     const product_items = await this.productItemRepository.find({
@@ -18,7 +43,7 @@ export class ProductItemsService {
       relations: ['product'],
     });
     const iter = Math.min(count, product_items.length);
-    for (let i = 0; i < iter; i ++) {
+    for (let i = 0; i < iter; i++) {
       // const startTime = new Date().getTime();
       if (product_items[i].product.attribute === ProductAttribute.gift) {
         product_items[i].source = productItemSource.PLATFORM_GIFT;
@@ -30,7 +55,6 @@ export class ProductItemsService {
       // this.logger.log(`init product item ${i} cost ${endTime - startTime} ms`);
     }
     return true;
-
   }
   private readonly logger = new Logger(ProductItemsService.name);
   constructor(

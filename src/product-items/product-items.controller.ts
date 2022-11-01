@@ -93,6 +93,12 @@ export class ProductItemsController {
     );
   }
 
+  @Get('/findAllByUser')
+  @UseGuards(JwtGuard)
+  findAllByUser(@CollectorId() collectorId: string) {
+    return this.productItemsService.findAllByUser(+collectorId);
+  }
+
   @Get('/findOneByUser/:id')
   @UseGuards(JwtGuard)
   findOneByUser(
