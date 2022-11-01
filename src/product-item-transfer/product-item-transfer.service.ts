@@ -34,6 +34,7 @@ export class ProductItemTransferService {
               'receiver',
               'original_product_item',
               'target_product_item',
+              'original_product_item.product',
             ]
           : [],
       }),
@@ -61,6 +62,7 @@ export class ProductItemTransferService {
               'receiver',
               'original_product_item',
               'target_product_item',
+              'original_product_item.product',
             ]
           : [],
         skip: (page - 1) * limit,
