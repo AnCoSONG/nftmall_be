@@ -139,6 +139,7 @@ export class CollectorsController {
   }
 
   @Get(':id')
+  @UseGuards(JwtGuard)
   findOne(
     @Param('id', ParseIntPipe) id: number,
     @Query('with_relation', ParseBoolPipe) with_relation: boolean,
