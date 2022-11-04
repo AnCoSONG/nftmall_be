@@ -35,6 +35,12 @@ export class ProductItemsController {
   //   return this.productItemsService.findAll(with_relation);
   // }
 
+  // 批任务：编辑藏品source字段
+  // @Post('batch_job')
+  // batch_job(@Query('count', ParseIntPipe) count: number) {
+  //   return this.productItemsService.batch_job(count);
+  // }
+
   @Get('/query')
   @ApiQuery({ name: 'id', required: false })
   @ApiQuery({ name: 'product_id', required: false })
@@ -85,6 +91,12 @@ export class ProductItemsController {
       +collector_id,
       product_id,
     );
+  }
+
+  @Get('/findAllByUser')
+  @UseGuards(JwtGuard)
+  findAllByUser(@CollectorId() collectorId: string) {
+    return this.productItemsService.findAllByUser(+collectorId);
   }
 
   @Get('/findOneByUser/:id')

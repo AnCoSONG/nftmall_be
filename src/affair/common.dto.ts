@@ -49,3 +49,11 @@ export class PayDto {
   @ApiProperty()
   type: 'jsapi' | 'h5' // 支付类型
 }
+
+export class NftTransferDto {
+  @ApiProperty()
+  receiver_id: number;
+
+  @ApiProperty()
+  product_item_id: string;
+}

@@ -18,11 +18,12 @@ import { Throttle } from '@nestjs/throttler';
 import { ThrottlerBehindProxyGuard } from '../guards/throttler-behind-proxy.guard';
 import { CreateProductDto } from '../products/dto/create-product.dto';
 import { AffairService } from './affair.service';
-import { DrawDto, PayDto, SeckillDto, WxCallbackDto } from './common.dto';
+import { DrawDto, NftTransferDto, PayDto, SeckillDto, WxCallbackDto } from './common.dto';
 import { CollectorId } from '../decorators';
 import { JwtGuard } from '../auth/guards/jwt.guard';
 import { IncrementProductDto } from '../products/dto/increment-product.dto';
 import { AdminGuard } from '../auth/guards/admin.guard';
+import { transferLaunchType } from '../common/const';
 
 @ApiTags('事务')
 @Controller('affair')
@@ -203,4 +204,12 @@ export class AffairController {
   stock(@Param('product_id') product_id: string, @Query('db') db: string) {
     return this.affairService.get_stock_count(product_id, db);
   }
+
+  @Post('/transfer_nft')
+  @UseGuards(JwtGuard)
+  transfer_nft(@CollectorId() collector_id: number, @Body() nftTransferDto: NftTransferDto) {
+    return this.affairService.transfer_nft(+collector_id, nftTransferDto.receiver_id, nftTransferDto.product_item_id, transferLaunchType.USER)
+  }
+
+  // todo: 盯链转赠接口，只需将参数更改为手机号，首先拿到两方id，然后调用transfer_nft将launch_type改为DINGBLOCK
 }

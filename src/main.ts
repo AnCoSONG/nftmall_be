@@ -30,7 +30,7 @@ async function bootstrap() {
       cors: {
         origin:
           process.env.NODE_ENV === 'dev'
-            ? ['http://localhost:3000']
+            ? ['http://localhost:3000', 'http://localhost:3002']
             : ['https://www.jinyuanshuzi.com', 'https://admin-hsxedh93jf4zthd0.jinyuanshuzi.com'],
         credentials: true,
       },
@@ -74,7 +74,7 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('~api', app, document);
   const argv = minimist(process.argv.slice(2));
   // console.log(argv['port']);
   // console.log(123);

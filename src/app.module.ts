@@ -31,6 +31,7 @@ import { ThrottlerStorageRedisService } from 'nestjs-throttler-storage-redis';
 import { AliModule } from './ali/ali.module';
 import { DocumentsModule } from './documents/documents.module';
 import { LoggerModule } from 'nestjs-pino';
+import { ProductItemTransferModule } from './product-item-transfer/product-item-transfer.module';
 import pino from 'pino';
 
 declare module 'ioredis' {
@@ -65,7 +66,9 @@ declare module 'ioredis' {
     // }),
     ConfigModule.forRoot({
       // .env 也不应该上传，应该根据Github Action动态生成
-      envFilePath: ['.env.local', '.env'],
+      envFilePath: [
+        process.env.NODE_ENV === 'dev' ? '.env.dev.local' : '.env.prod.local',
+      ],
       isGlobal: true,
       load: [config],
     }),
@@ -79,7 +82,9 @@ declare module 'ioredis' {
         password: configService.get('database.password'),
         database: configService.get('database.database'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: process.env.NODE_ENV === 'dev',
+        // synchronize: process.env.NODE_ENV === 'dev', // 不要动表结构
+        // 生产环境务必设置为false
+        synchronize: configService.get('database.sync'),
       }),
       inject: [ConfigService],
     }),
@@ -90,7 +95,7 @@ declare module 'ioredis' {
           host: configService.get('redis.host'),
           port: +configService.get<number>('redis.port'),
           password: configService.get('redis.password'),
-          db: 1, // for queue
+          db: +configService.get<number>('redis.queue_db'), // for queue
         },
       }),
       inject: [ConfigService],
@@ -106,7 +111,7 @@ declare module 'ioredis' {
           host: configService.get('redis.host'),
           port: +configService.get<number>('redis.port'),
           password: configService.get('redis.password'),
-          db: 0, // for cache
+          db: +configService.get<number>('redis.cache_db'), // for cache
           onClientCreated(client: Redis) {
             client.defineCommand('seckill', {
               //! 目前只能一次购买一个，可以多次购买
@@ -119,7 +124,7 @@ declare module 'ioredis' {
             client.defineCommand('returnStock', {
               lua: `redis.call('incr', KEYS[1])\nlocal bought_count = tonumber(redis.call('hget', KEYS[2], ARGV[1]))\nif (bought_count < 1) then return -1 end\nredis.call('hincrby', KEYS[2], ARGV[1], -1)\nredis.call('sadd', KEYS[3], ARGV[2])\nreturn 0\n`,
               numberOfKeys: 3,
-            })
+            });
           },
         },
       }),
@@ -152,6 +157,7 @@ declare module 'ioredis' {
     ScheduleModule.forRoot(),
     AliModule,
     DocumentsModule,
+    ProductItemTransferModule,
   ],
   controllers: [AppController],
   providers: [AppService],

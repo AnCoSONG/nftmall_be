@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { CollectorRole } from '../../common/const';
 import { Order } from '../../orders/entities/order.entity';
+import { ProductItemTransfer } from '../../product-item-transfer/entities/product-item-transfer.entity';
 import { ProductItem } from '../../product-items/entities/product-item.entity';
 
 @Entity()
@@ -62,6 +63,16 @@ export class Collector {
     cascade: true,
   })
   collections: ProductItem[];
+
+  @OneToMany(() => ProductItemTransfer, (product_item_transfer) => product_item_transfer.sender, {
+    cascade: true
+  })
+  send_transfers: ProductItemTransfer[];
+
+  @OneToMany(() => ProductItemTransfer, (product_item_transfer) => product_item_transfer.receiver, {
+    cascade: true
+  })
+  receive_transfers: ProductItemTransfer[];
 
   @VersionColumn({ type: 'smallint', unsigned: true })
   version: number;

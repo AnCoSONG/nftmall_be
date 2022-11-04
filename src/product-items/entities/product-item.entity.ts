@@ -11,7 +11,7 @@ import {
   VersionColumn,
 } from 'typeorm';
 import { Collector } from '../../collectors/entities/collector.entity';
-import { onChainStatus } from '../../common/const';
+import { onChainStatus, productItemSource, productItemStatus } from '../../common/const';
 
 @Entity()
 export class ProductItem {
@@ -61,6 +61,12 @@ export class ProductItem {
 
   @Column({ type: 'timestamp', width: 6, nullable: true })
   on_chain_timestamp: Date | null;
+
+  @Column({ type: 'enum', enum: productItemStatus, default: productItemStatus.DEFAULT })
+  status: productItemStatus;
+
+  @Column({ type: 'enum', enum: productItemSource, default: productItemSource.TBD })
+  source: productItemSource;
 
   @VersionColumn({ type: 'smallint', unsigned: true })
   version: number;

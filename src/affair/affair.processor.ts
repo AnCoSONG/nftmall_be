@@ -11,7 +11,9 @@ import { BadRequestException, Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import Redis from 'ioredis';
 import { BsnService } from '../bsn/bsn.service';
-import { BSN_TX_STATUS } from '../common/const';
+import { BSN_TX_STATUS, onChainStatus, productItemSource, productItemStatus } from '../common/const';
+import { ProductItemTransferService } from '../product-item-transfer/product-item-transfer.service';
+import { ProductItem } from '../product-items/entities/product-item.entity';
 import { ProductItemsService } from '../product-items/product-items.service';
 import { ProductsService } from '../products/products.service';
 import { AffairService } from './affair.service';
@@ -24,6 +26,7 @@ export class AffairProcessor {
     private readonly bsnService: BsnService,
     private readonly productsService: ProductsService,
     private readonly productItemsService: ProductItemsService,
+    private readonly productItemTransferService: ProductItemTransferService,
     @InjectRedis() private readonly redis: Redis,
   ) {}
 
@@ -103,6 +106,7 @@ export class AffairProcessor {
       const createRes = await this.productItemsService.create({
         product_id: job.data.product_id,
         no: i,
+        source: productItemSource.BUY,
       });
       this.logger.log(
         `create-product-items: ${createRes.product_id} ${createRes.no} ${createRes.id}`,
@@ -244,5 +248,101 @@ export class AffairProcessor {
     this.logger.log(`${job.id} - ${job.name} - complete!`);
     // 完成后自动删除
     await this.redis.del(`gen_lucky_set:${job.data.product_id}`);
+  }
+
+  @Process('update-transfer-nft-status')
+  async updateTransferNftStatus(
+    job: Job<{
+      product_item_transfer_id: string;
+      operation_id: string;
+      old_product_item: ProductItem,
+      receiver_id: number
+    }>,
+  ) {
+    const tx_res = await this.bsnService.get_transactions(
+      job.data.operation_id,
+    );
+    if (tx_res.code) {
+      this.logger.warn(
+        `[UPDATE TRANSFER NFT STATUS] Get tx error, ${job.data.operation_id}`,
+      );
+      await this.productItemTransferService.transferFailed(
+        job.data.product_item_transfer_id,
+        job.data.operation_id,
+      );
+      throw new Error('Get Tx Error');
+    }
+    if (tx_res.status === BSN_TX_STATUS.PENDING) {
+      this.logger.warn(
+        `[UPDATE TRANSFER NFT STATUS] update nft id: pending, ${job.data.operation_id}`,
+      );
+      await this.productItemTransferService.transferPending(
+        job.data.product_item_transfer_id,
+        job.data.operation_id,
+      );
+      throw new Error('Update nft id has not finished.');
+    } else if (tx_res.status === BSN_TX_STATUS.PROCESSING) {
+      this.logger.warn(
+        `[UPDATE TRANSFER NFT STATUS] update nft id: processing, ${job.data.operation_id}`,
+      );
+      await this.productItemTransferService.transferProcessing(
+        job.data.product_item_transfer_id,
+        job.data.operation_id,
+      );
+      throw new Error('update nft id: processing');
+    } else if (tx_res.status === BSN_TX_STATUS.FAILED) {
+      this.logger.error(
+        `[UPDATE TRANSFER NFT STATUS] update nft id: failed, ${job.data.operation_id}`,
+      );
+      await this.productItemTransferService.transferFailed(
+        job.data.product_item_transfer_id,
+        job.data.operation_id,
+      );
+      throw new Error('update nft id: failed');
+    } else if (tx_res.status === BSN_TX_STATUS.SUCCESS) {
+      this.logger.log(
+        'transfer nft success, success tx hash: ' +
+          tx_res.tx_hash +
+          '  nft_id: ' +
+          tx_res.nft_id +
+          '  nft_class_id: ' +
+          tx_res.class_id + 
+          '  origin_nft_id:' + job.data.old_product_item.nft_id + 
+          '  origin_nft_class_id' + job.data.old_product_item.nft_class_id
+      );
+      // * 创建一个相同的productItem给受赠者账户
+      const transferedProductItem = await this.productItemsService.create({
+        product_id: job.data.old_product_item.product_id,
+        nft_id: tx_res.nft_id,
+        nft_class_id: tx_res.class_id,
+        owner_id: job.data.receiver_id,
+        source: productItemSource.TRANSFER, // 转赠
+        no: job.data.old_product_item.no,
+        operation_id: job.data.operation_id,
+        tx_hash: tx_res.tx_hash, // 转赠tx_hash
+        on_chain_status: onChainStatus.SUCCESS,
+        on_chain_timestamp: new Date(tx_res.timestamp), // 转赠时间
+        status: productItemStatus.DEFAULT
+      })
+
+      // * 旧productItem设置为transfered
+      const oldTransferedRes = await this.productItemsService.update(job.data.old_product_item.id, {
+        status: productItemStatus.TRANSFERED
+      });
+
+      // * 更新productItemTransfer的状态为成功
+      const transferSuccessRes = await this.productItemTransferService.transferSuccess(
+        job.data.product_item_transfer_id,
+        job.data.operation_id,
+        transferedProductItem.id,
+        tx_res.tx_hash,
+        new Date(tx_res.timestamp)
+      )
+      return {
+        transferedProductItem,
+        oldTransferedRes,
+        transferSuccessRes
+      }
+    }
   }
 }

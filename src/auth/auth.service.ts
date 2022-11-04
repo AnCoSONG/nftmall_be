@@ -40,6 +40,13 @@ export class AuthService {
   ) {}
   // 发送验证码
   async sendCode(sendCodeDto: SendCodeDto) {
+
+    // 验证是否已经发过
+    const sendFlag = await redisExceptionCatcher(this.redis.get(`sendflag-${sendCodeDto.phone}`))
+    // console.log(sendFlag)
+    if (sendFlag == 1){
+      return "code is send"
+    }
     const code = Math.floor(Math.random() * 1000000)
       .toString()
       .padStart(6, '0');
@@ -51,6 +58,7 @@ export class AuthService {
         this.configService.get('smscode.expires_in'),
       ), // default: 5分钟过期
     );
+
     if (res === 'OK') {
       const sendCodeRes = await this.aliService.sendCode(
         sendCodeDto.phone,
@@ -58,7 +66,19 @@ export class AuthService {
       );
       if (sendCodeRes.code.toLowerCase() === 'ok') {
         this.logger.log(`send code ${code} to ${sendCodeDto.phone} success.`);
-        return 'send code success';
+        const sendflag_set = await redisExceptionCatcher(
+          this.redis.set(
+            `sendflag-${sendCodeDto.phone}`,
+            1,
+            'EX',
+            60
+          )
+        )
+        if (sendflag_set == 'OK') {
+          return 'send code success';
+        } else {
+          return 'send code success but send flag has not been set'
+        }
       } else {
         this.logger.error(
           `Send code error: ${sendCodeRes.code} - ${sendCodeRes.message}`,
@@ -75,9 +95,9 @@ export class AuthService {
   // 验证是否匹配
   async validateCode(phone: string, code: string) {
     // debug
-    if (code === '123456') {
-      return true;
-    }
+    // if (code === '123456') {
+    //   return true;
+    // }
     // debug
     const res = await redisExceptionCatcher(this.redis.get(phone));
     if (!res) {

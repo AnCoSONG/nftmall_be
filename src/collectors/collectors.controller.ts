@@ -64,8 +64,9 @@ export class CollectorsController {
     });
   }
 
-  @Get('/:id/collections')
-  async getCollections(@Param('id', ParseIntPipe) id: string) {
+  @Get('/collections')
+  @UseGuards(JwtGuard)
+  async getCollections(@CollectorId() id: number) {
     return await this.collectorsService.getCollections(+id);
   }
 
@@ -129,6 +130,7 @@ export class CollectorsController {
   }
 
   @Post('/addCredit')
+  @UseGuards(AdminGuard)
   addCredit(
     @Query('id', ParseIntPipe) id: number,
     @Query('credit', ParseIntPipe) credit: number,
@@ -137,6 +139,7 @@ export class CollectorsController {
   }
 
   @Get(':id')
+  @UseGuards(JwtGuard)
   findOne(
     @Param('id', ParseIntPipe) id: number,
     @Query('with_relation', ParseBoolPipe) with_relation: boolean,
@@ -146,6 +149,7 @@ export class CollectorsController {
 
   @Patch('/update')
   @UsePipes(new JoiValidationPipe(UpdateCollectorSchema))
+  @UseGuards(JwtGuard)
   updateBySelf(
     @CollectorId() id: number,
     @Body() updateCollectorDto: UpdateCollectorDto,
@@ -155,6 +159,7 @@ export class CollectorsController {
   
   @Patch(':id')
   @UsePipes(new JoiValidationPipe(UpdateCollectorSchema))
+  @UseGuards(AdminGuard)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCollectorDto: UpdateCollectorDto,
@@ -163,6 +168,7 @@ export class CollectorsController {
   }
 
   @Delete(':id')
+  @UseGuards(AdminGuard)
   remove(@Param('id') id: number) {
     return this.collectorsService.remove(id);
   }
