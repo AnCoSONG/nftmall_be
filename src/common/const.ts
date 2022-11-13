@@ -40,20 +40,20 @@ export enum transferStatus {
 export enum productItemStatus {
   DEFAULT = 'default',
   LOCKED = 'locked',
-  TRANSFERED = 'transfered'
+  TRANSFERED = 'transfered',
 }
 
-export enum productItemSource  {
+export enum productItemSource {
   TBD = 'TBD',
   BUY = 'BUY',
   PLATFORM_GIFT = 'PLATFORM_GIFT',
-  TRANSFER = 'TRANSFER'
+  TRANSFER = 'TRANSFER',
 }
 
 export enum transferLaunchType {
   USER = 'user',
   DINGBLOCK = 'dingblock',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 export const phoneReg =
@@ -64,7 +64,7 @@ export enum AuthError {
   REFRESHED = 1,
   OUTDATED = 2,
   INVALID = 3,
-  UNKNOWN = 4
+  UNKNOWN = 4,
 }
 
 export type Tag = {
@@ -92,7 +92,14 @@ export type CallbackData = {
   out_trade_no: string;
   transaction_id: string;
   trade_type: 'JSAPI' | 'NATIVE' | 'APP' | 'MICROPAY' | 'MWEB' | 'FACEPAY';
-  trade_state: 'SUCCESS' | 'REFUND' | 'NOTPAY' | 'CLOSED' | 'REVOKED' | 'USERPAYING' | 'PAYERROR';
+  trade_state:
+    | 'SUCCESS'
+    | 'REFUND'
+    | 'NOTPAY'
+    | 'CLOSED'
+    | 'REVOKED'
+    | 'USERPAYING'
+    | 'PAYERROR';
   trade_state_desc: string;
   bank_type: string;
   attach: string;
@@ -105,15 +112,16 @@ export type CallbackData = {
     payer_total: number;
     currency: string;
     payer_currency: string;
-  }
-}
+  };
+};
 
 export enum CollectorRole {
   normal = 'normal',
-  official = 'official'
+  official = 'official',
 }
 
 export enum ProductAttribute {
   normal = 'normal',
-  gift = 'gift'
+  gift = 'gift',
+  notShowLottery = 'notShowLottery',
 }

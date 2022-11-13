@@ -16,7 +16,7 @@ export class UpdateCollectorDto extends PartialType(CreateCollectorDto) {
   })
   bsn_address?: string;
 
-  @ApiProperty({ description: '邮寄地址', example: null})
+  @ApiProperty({ description: '邮寄地址', example: '山西' })
   delivery_address?: string;
 
   @ApiProperty({ description: '积分', example: 1 })

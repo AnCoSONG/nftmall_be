@@ -55,7 +55,7 @@ export class CollectorsService {
     }
     const collector = this.collectorRepository.create(createCollectorDto);
     const createAccountRes = await this.bsnService.create_account(
-      collector.initial_username
+      collector.initial_username,
     );
     if (createAccountRes.code) {
       throw new InternalServerErrorException('Error when create bsn account');
@@ -67,7 +67,9 @@ export class CollectorsService {
   async findAll(with_relation = false) {
     return await sqlExceptionCatcher(
       this.collectorRepository.find({
-        relations: with_relation ? ['orders', 'collections', 'send_transfers', 'receive_transfers'] : [],
+        relations: with_relation
+          ? ['orders', 'collections', 'send_transfers', 'receive_transfers']
+          : [],
       }),
     );
   }
@@ -91,7 +93,9 @@ export class CollectorsService {
   async findOne(id: number, with_relation = false) {
     const collector = await sqlExceptionCatcher(
       this.collectorRepository.findOne(id, {
-        relations: with_relation ? ['orders', 'collections', 'send_transfers', 'receive_transfers'] : [],
+        relations: with_relation
+          ? ['orders', 'collections', 'send_transfers', 'receive_transfers']
+          : [],
       }),
     );
     if (!collector) {
@@ -184,12 +188,12 @@ export class CollectorsService {
   }
 
   async getSendTransfers(id: number) {
-    const collector = await this.findOne(id, true)
+    const collector = await this.findOne(id, true);
     return collector.send_transfers;
   }
 
   async getReceiveTransfers(id: number) {
-    const collector = await this.findOne(id, true)
+    const collector = await this.findOne(id, true);
     return collector.receive_transfers;
   }
 
@@ -218,7 +222,7 @@ export class CollectorsService {
     const res = (
       await this.httpService
         .get('/idcardcheck', {
-          params: { name, idcard },
+          params: { name, idcard},
         })
         .toPromise()
         .catch((e) => {

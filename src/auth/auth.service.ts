@@ -40,16 +40,18 @@ export class AuthService {
   ) {}
   // 发送验证码
   async sendCode(sendCodeDto: SendCodeDto) {
-
     // 验证是否已经发过
-    const sendFlag = await redisExceptionCatcher(this.redis.get(`sendflag-${sendCodeDto.phone}`))
+    const sendFlag = await redisExceptionCatcher(
+      this.redis.get(`sendflag-${sendCodeDto.phone}`),
+    );
     // console.log(sendFlag)
-    if (sendFlag == 1){
-      return "code is send"
+    if (sendFlag == 1) {
+      return 'code is send';
     }
     const code = Math.floor(Math.random() * 1000000)
       .toString()
       .padStart(6, '0');
+    console.log(code);
     const res = await redisExceptionCatcher(
       this.redis.set(
         sendCodeDto.phone,
@@ -67,17 +69,12 @@ export class AuthService {
       if (sendCodeRes.code.toLowerCase() === 'ok') {
         this.logger.log(`send code ${code} to ${sendCodeDto.phone} success.`);
         const sendflag_set = await redisExceptionCatcher(
-          this.redis.set(
-            `sendflag-${sendCodeDto.phone}`,
-            1,
-            'EX',
-            60
-          )
-        )
+          this.redis.set(`sendflag-${sendCodeDto.phone}`, 1, 'EX', 60),
+        );
         if (sendflag_set == 'OK') {
           return 'send code success';
         } else {
-          return 'send code success but send flag has not been set'
+          return 'send code success but send flag has not been set';
         }
       } else {
         this.logger.error(
@@ -120,9 +117,9 @@ export class AuthService {
     let newCollector: Collector | null = null;
     if (data.length === 0) {
       // 创建一个
-      const initial_username = `藏家${loginDto.phone.substring(7)}${randomBytes(4).toString(
-        'hex',
-      )}`
+      const initial_username = `藏家${loginDto.phone.substring(7)}${randomBytes(
+        4,
+      ).toString('hex')}`;
       newCollector = await this.collectorService.create({
         phone: loginDto.phone,
         initial_username,
@@ -250,7 +247,7 @@ export class AuthService {
               ms(this.configService.get('jwt.access_expires_in')) / 2000, // half of access token
             ),
             60, // * 提供最多60秒来解决Promise all 接口刷新token时带来的refresh token不对齐问题
-          ), 
+          ),
         ),
       );
       this.logger.debug('set last refresh token: ' + redisLastTokenRes);

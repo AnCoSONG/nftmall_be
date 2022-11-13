@@ -45,6 +45,14 @@ declare module 'ioredis' {
       limit: number,
       callback?: Callback<number>,
     ): Result<number, Context>;
+    seckillNotShowLottery(
+      stock_key: string,
+      buy_hash_key: string,
+      items_key: string,
+      collector_id: number,
+      limit: number,
+      callback?: Callback<number>,
+    ): Result<number, Context>;
     returnStock(
       stock_key: string,
       buy_hash_key: string,
@@ -119,6 +127,14 @@ declare module 'ioredis' {
               // 1. 库存是否<=0 2. 是否有资格 3. 是否已购买 4. 更新库存 5. 添加用户到buyset 6. 返回新库存
               //lua: `local stock = tonumber(redis.call('get', KEYS[2]))\nif (stock <= 0) then return -1 end\nlocal res1 = redis.call('sismember', KEYS[1], ARGV[1]) \nif (res1 == 0) then return -2 end \nlocal bought = redis.call('sismember',KEYS[3], ARGV[1])\nif (bought == 1) then return -3 end\nlocal newstock = redis.call('decr', KEYS[2]) \n if (newstock < 0) then return -1 end \nredis.call('sadd', KEYS[3], ARGV[1])\nreturn newstock \n`,
               lua: `local stock = tonumber(redis.call('get', KEYS[2]))\nif (stock <= 0) then return -1 end\nlocal qualified = redis.call('sismember', KEYS[1], ARGV[1])\nif (qualified == 0) then return -2 end\nlocal bought_count = redis.call('hget', KEYS[3], ARGV[1])\nif (bought_count == ARGV[2]) then return -3 end\nlocal newstock = redis.call('decr', KEYS[2])\nif (newstock < 0) then return -1 end\nredis.call('hincrby', KEYS[3], ARGV[1], 1)\nlocal item = redis.call('spop', KEYS[4], 1)\nreturn item\n`,
+              numberOfKeys: 4,
+            });
+            client.defineCommand('seckillNotShowLottery', {
+              //! 目前只能一次购买一个，可以多次购买
+              // todo: 修改redis脚本支持多个
+              // 1. 库存是否<=0  2. 是否已购买 3. 更新库存 4. 添加用户到buyset 5. 返回新库存
+              //lua: `local stock = tonumber(redis.call('get', KEYS[2]))\nif (stock <= 0) then return -1 end\nlocal res1 = redis.call('sismember', KEYS[1], ARGV[1]) \nif (res1 == 0) then return -2 end \nlocal bought = redis.call('sismember',KEYS[3], ARGV[1])\nif (bought == 1) then return -3 end\nlocal newstock = redis.call('decr', KEYS[2]) \n if (newstock < 0) then return -1 end \nredis.call('sadd', KEYS[3], ARGV[1])\nreturn newstock \n`,
+              lua: `local stock = tonumber(redis.call('get', KEYS[1]))\nif (stock <= 0) then return -1 end\nlocal bought_count = redis.call('hget', KEYS[2], ARGV[1])\nif (bought_count == ARGV[2]) then return -3 end\nlocal newstock = redis.call('decr', KEYS[1])\nif (newstock < 0) then return -1 end\nredis.call('hincrby', KEYS[2], ARGV[1], 1)\nlocal item = redis.call('spop', KEYS[3], 1)\nreturn item\n`,
               numberOfKeys: 4,
             });
             client.defineCommand('returnStock', {

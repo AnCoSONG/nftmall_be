@@ -45,21 +45,37 @@ export class ProductsService {
       createProductDto.sale_timestamp,
     );
     const now_dayjs = this.dayjsService.dayjsify();
-    if (
-      !(
-        // 验证timestamp是否按照正确大小顺序
-        // now < draw < draw_end < sale
-        (
-          draw_end_dayjs > draw_dayjs &&
-          draw_end_dayjs < sale_dayjs &&
-          draw_dayjs > now_dayjs
+    // 如果是不显示抽签的藏品只需要判断发售时间是否合理
+    if (createProductDto.attribute === 'notShowLottery') {
+      if (
+        !(
+          // 验证timestamp是否按照正确大小顺序
+          // now < sale
+          (sale_dayjs > now_dayjs)
         )
-      )
-    ) {
-      throw new BadRequestException(
-        'timestamp should be like: Now < draw timestamp < draw end timestamp < sale timestamp',
-      );
+      ) {
+        throw new BadRequestException(
+          'timestamp should be like: Now < sale timestamp',
+        );
+      }
+    } else {
+      if (
+        !(
+          // 验证timestamp是否按照正确大小顺序
+          // now < draw < draw_end < sale
+          (
+            draw_end_dayjs > draw_dayjs &&
+            draw_end_dayjs < sale_dayjs &&
+            draw_dayjs > now_dayjs
+          )
+        )
+      ) {
+        throw new BadRequestException(
+          'timestamp should be like: Now < draw timestamp < draw end timestamp < sale timestamp',
+        );
+      }
     }
+
     const product = this.productRepository.create(createProductDto);
     if (createProductDto.genres) {
       // 检查dto里面是否有已经存在的genre

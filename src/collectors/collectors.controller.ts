@@ -156,7 +156,7 @@ export class CollectorsController {
   ) {
     return this.collectorsService.update(id, updateCollectorDto);
   }
-  
+
   @Patch(':id')
   @UsePipes(new JoiValidationPipe(UpdateCollectorSchema))
   @UseGuards(AdminGuard)
