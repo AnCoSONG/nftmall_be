@@ -67,7 +67,7 @@ declare module 'ioredis' {
     ConfigModule.forRoot({
       // .env 也不应该上传，应该根据Github Action动态生成
       envFilePath: [
-        process.env.NODE_ENV === 'dev' ? '.env.dev.local' : '.env.prod.local',
+        `.env.${process.env.NODE_ENV}.local`, '.env.local'
       ],
       isGlobal: true,
       load: [config],
