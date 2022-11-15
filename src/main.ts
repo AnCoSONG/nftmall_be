@@ -29,7 +29,7 @@ async function bootstrap() {
     {
       cors: {
         origin:
-          process.env.NODE_ENV === 'dev'
+          process.env.NODE_ENV === 'dev' || process.env.NODE_ENV === 'test'
             ? ['http://localhost:3000', 'http://localhost:3002']
             : [
                 'https://www.jinyuanshuzi.com',
