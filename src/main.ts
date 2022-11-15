@@ -29,12 +29,15 @@ async function bootstrap() {
     {
       cors: {
         origin:
-          process.env.NODE_ENV === 'dev'
+          process.env.NODE_ENV === 'dev' || process.env.NODE_ENV === 'test'
             ? ['http://localhost:3000', 'http://localhost:3002']
-            : ['https://www.jinyuanshuzi.com', 'https://admin-hsxedh93jf4zthd0.jinyuanshuzi.com'],
+            : [
+                'https://www.jinyuanshuzi.com',
+                'https://admin-hsxedh93jf4zthd0.jinyuanshuzi.com',
+              ],
         credentials: true,
       },
-      bufferLogs: false
+      bufferLogs: false,
     },
   );
   // if (process.env.NODE_ENV !== 'dev') {
@@ -66,6 +69,7 @@ async function bootstrap() {
   app.register(FastifyCsrf, { cookieOpts: { signed: true } });
   app.useGlobalInterceptors(new TransformInterceptor());
   app.useGlobalFilters(new HttpExceptionFilter());
+
 
   const config = new DocumentBuilder()
     .setTitle('Digital Art Mall')

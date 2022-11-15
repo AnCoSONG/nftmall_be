@@ -4,7 +4,7 @@ export class CreateCollectorDto {
 
   @ApiProperty({ description: '初始用户名', example: 'test'})
   initial_username: string;
-  
+
   @ApiProperty({ description: '用户名', example: 'admin' })
   username: string;
 
@@ -28,7 +28,6 @@ export class IDCheckDto {
 }
 
 export class IdProductIdDto {
-
   @ApiProperty({ description: '产品ID', example: 'string' })
   product_id: string;
 }
