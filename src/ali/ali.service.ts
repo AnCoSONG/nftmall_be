@@ -11,8 +11,8 @@ export class AliService {
 
   async sendCode(phone: string, code: string) {
     const sms_request = new SendSmsRequest({
-      signName: '晋元数字',
-      templateCode: 'SMS_242870473',
+      signName: '启源数字',
+      templateCode: 'SMS_258695113',
       phoneNumbers: phone,
       templateParam: `{"code":"${code}"}`,
     });
