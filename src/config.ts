@@ -50,6 +50,7 @@ export default () => {
     encrypt_secret: process.env.ENCRYPT_SECRET,
     admin: {
       secret: process.env.ADMIN_SECRET
-    }
+    },
+    mall_name: process.env.MALL_NAME,
   };
 };

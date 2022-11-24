@@ -334,9 +334,10 @@ export class AffairService {
     product: Product,
     publisher: Publisher,
   ) {
+    const mall_name = this.configService.get('mall_name')
     const createNftClassRes = await this.bsnService.create_nft_class({
       owner: publisher.bsn_address,
-      name: `${product.name}@晋元数字`,
+      name: `${product.name}@${mall_name}`,
       uri: product.chain_src, // add chain src to nft class
     });
     if (createNftClassRes.code) {
@@ -1050,11 +1051,12 @@ export class AffairService {
     product_item: ProductItem,
     buyer: Collector,
   ) {
+    const mall_name = this.configService.get('mall_name')
     const createNftRes = await this.bsnService.create_nft({
       class_id: product_item.product.nft_class_id,
       name: `${product_item.product.name}#${product_item.no
         .toString()
-        .padStart(4, '0')}@晋元数字#${buyer.id}`, // 不要用名字了，用户ID不会变 // fix 去掉括号
+        .padStart(4, '0')}@${mall_name}#${buyer.id}`, // 不要用名字了，用户ID不会变 // fix 去掉括号
       uri: product_item.product.chain_src, // 链上存储chain_src
       recipient: buyer.bsn_address,
       data: product_item.id, // 将product_item_id作为data存储，后续查询用户名下藏品的流程是: 查链上用户名下藏品，查到data字段

@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { AppService } from './app.service';
 import { AdminGuard } from './auth/guards/admin.guard';
@@ -11,6 +12,7 @@ export class AppController {
   constructor(
     private readonly appService: AppService,
     private readonly bsnService: BsnService,
+    private readonly configService: ConfigService
   ) {}
 
   @Get()
@@ -22,6 +24,11 @@ export class AppController {
   @UseGuards(AdminGuard)
   getAdminHello(): string {
     return this.appService.getHello()
+  }
+
+  @Get('/test-mall-name')
+  testMallName() {
+    return this.configService.get('mall_name')
   }
 
   // 测试限速
