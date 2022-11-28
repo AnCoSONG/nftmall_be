@@ -75,3 +75,6 @@ declare type ProductItemTransfer {
   tx_success_time: string
 }
 ```
+
+## 提交方式
+采用远程仓库 + 共存SSH Key的方式实现。
