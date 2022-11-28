@@ -77,4 +77,5 @@ declare type ProductItemTransfer {
 ```
 
 ## 提交方式
-采用远程仓库 + 共存SSH Key的方式实现。
+
+配置好`.env`参数和`apiclient_cert/key.pem`文件
